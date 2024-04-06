@@ -5,6 +5,8 @@ VisualStudioVersion = 17.3.32825.248
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpcAgent", "OpcAgent\OpcAgent.csproj", "{3C6438D4-DD7F-4536-854F-2D3A5EB9BBF5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpcAgent.Lib", "OpcAgent.Lib\OpcAgent.Lib.csproj", "{B69703E2-DD16-4B98-AAFE-61C4BEC337FE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{3C6438D4-DD7F-4536-854F-2D3A5EB9BBF5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3C6438D4-DD7F-4536-854F-2D3A5EB9BBF5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3C6438D4-DD7F-4536-854F-2D3A5EB9BBF5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B69703E2-DD16-4B98-AAFE-61C4BEC337FE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B69703E2-DD16-4B98-AAFE-61C4BEC337FE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B69703E2-DD16-4B98-AAFE-61C4BEC337FE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B69703E2-DD16-4B98-AAFE-61C4BEC337FE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

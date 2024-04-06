@@ -1,38 +1,35 @@
 ﻿using Microsoft.Extensions.Configuration;
-using Opc.UaFx;
+using Opc.Ua;
 using Opc.UaFx.Client;
+using OpcAgent;
+using OpcAgent.Enums.Feature;
+using OpcAgent.Lib;
+using OpcAgent.Selector.Implementation;
+
 
 IConfigurationRoot config = new ConfigurationBuilder()
     .AddUserSecrets<Program>()
     .Build();
 string serverAddress = config.GetConnectionString("serverAddress");
+// string serviceConnectionString = config["IoTHub"];
+// using var serviceClient = ServiceClient.CreateFromConnectionString(serviceConnectionString);
+// using var registryManager = RegistryManager.CreateFromConnectionString(serviceConnectionString);
 
 
-using (var client = new OpcClient(serverAddress))
+using var client = new OpcClient(serverAddress);
+
+client.Connect();
+NodeId nodeId = new NodeId("ns=2;s=Device 1");
+
+ProductionLineManager productionLineManager = new ProductionLineManager(client, nodeId);
+
+ProductionLineFeatureSelector selector = new ProductionLineFeatureSelector(productionLineManager);
+int input;
+do
 {
-    client.Connect();
+    selector.PrintMenu();
+    input = selector.ReadInput();
+    selector.Execute((ProductionLineFeature)input);
+} while (input != 0);
 
-    OpcReadNode[] commands = new OpcReadNode[] {
-    new OpcReadNode("ns=2;s=Device 1/ProductionStatus", OpcAttribute.DisplayName),
-    new OpcReadNode("ns=2;s=Device 1/ProductionStatus"),
-    new OpcReadNode("ns=2;s=Device 1/ProductionRate", OpcAttribute.DisplayName),
-    new OpcReadNode("ns=2;s=Device 1/ProductionRate"),
-    new OpcReadNode("ns=2;s=Device 1/WorkorderId", OpcAttribute.DisplayName),
-    new OpcReadNode("ns=2;s=Device 1/WorkorderId"),
-    new OpcReadNode("ns=2;s=Device 1/Temperature", OpcAttribute.DisplayName),
-    new OpcReadNode("ns=2;s=Device 1/Temperature"),
-    new OpcReadNode("ns=2;s=Device 1/GoodCount", OpcAttribute.DisplayName),
-    new OpcReadNode("ns=2;s=Device 1/GoodCount"),
-    new OpcReadNode("ns=2;s=Device 1/BadCount", OpcAttribute.DisplayName),
-    new OpcReadNode("ns=2;s=Device 1/BadCount"),
-    new OpcReadNode("ns=2;s=Device 1/DeviceError", OpcAttribute.DisplayName),
-    new OpcReadNode("ns=2;s=Device 1/DeviceError"),
-};
-
-    IEnumerable<OpcValue> job = client.ReadNodes(commands);
-
-    foreach (var item in job)
-    {
-        Console.WriteLine(item.Value);
-    }
-}
+client.Disconnect();

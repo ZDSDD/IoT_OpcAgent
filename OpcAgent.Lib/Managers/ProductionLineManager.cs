@@ -21,10 +21,11 @@ public class ProductionLineManager : BaseManager
         _client = client;
         _nodeId = nodeId;
         _virtualDevice = virtualDevice;
-        InitVirtualDevice();
         _readValuesCommands = OpcUtils.InitReadNodes(this._nodeId);
         _readAttributeCommands = OpcUtils.InitReadNameNodes(this._nodeId);
         _errorSubscription = client.SubscribeDataChange($"{nodeId}/{OpcEndpoint.DeviceError}", HandleErrorsChanged);
+
+        InitVirtualDevice();
     }
 
     private async void InitVirtualDevice()

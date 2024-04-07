@@ -14,6 +14,8 @@ namespace OpcAgent.Lib.Device
         public event Action EmergencyStopRequested;
         public event Action ResetErrorStatusRequested;
 
+        public event Action<int> DesiredPropertyChangedRequested;
+
         #region Sending Messages
 
         public async Task SendMessage(PayloadData data, int errors)
@@ -78,17 +80,12 @@ namespace OpcAgent.Lib.Device
 
         #region Device Twin
 
-        public async Task UpdateTwinAsync()
+        public async Task UpdateProductionRateAsync(int productionRate)
         {
-            var twin = await deviceClient.GetTwinAsync();
-
-            Console.WriteLine(
-                $"\nInitial twin value received: \n{JsonConvert.SerializeObject(twin, Formatting.Indented)}");
-            Console.WriteLine();
-
-            var reportedProperties = new TwinCollection();
-            reportedProperties["DateTimeLastAppLaunch"] = DateTime.Now;
-
+            var reportedProperties = new TwinCollection
+            {
+                ["ProductionRate"] = productionRate
+            };
             await deviceClient.UpdateReportedPropertiesAsync(reportedProperties);
         }
 
@@ -101,7 +98,12 @@ namespace OpcAgent.Lib.Device
             await deviceClient.UpdateReportedPropertiesAsync(reportedProperties);
         }
 
-            await deviceClient.UpdateReportedPropertiesAsync(reportedProperties).ConfigureAwait(false);
+        private Task OnDesiredPropertyChanged(TwinCollection desiredProperties, object userContext)
+        {
+            if (!desiredProperties.Contains("ProductionRate")) return Task.CompletedTask;
+            int desiredProductionRate = desiredProperties["ProductionRate"];
+            DesiredPropertyChangedRequested?.Invoke(desiredProductionRate);
+            return Task.CompletedTask;
         }
 
         #endregion Device Twin
@@ -111,14 +113,14 @@ namespace OpcAgent.Lib.Device
             await deviceClient.SetReceiveMessageHandlerAsync(OnC2dMessageReceivedAsync, deviceClient);
 
             await deviceClient.SetMethodHandlerAsync("EmergencyStop", EmergencyStopHandler, deviceClient);
-            
+
             await deviceClient.SetMethodHandlerAsync("ResetErrorStatus", ResetErrorStatusHandler, deviceClient);
             await deviceClient.SetMethodDefaultHandlerAsync(DefaultServiceHandler, deviceClient);
 
             await deviceClient.SetDesiredPropertyUpdateCallbackAsync(OnDesiredPropertyChanged, deviceClient);
         }
 
-        private Task<MethodResponse> ResetErrorStatusHandler(MethodRequest methodrequest, object usercontext)
+        private Task<MethodResponse> ResetErrorStatusHandler(MethodRequest methodRequest, object usercontext)
         {
             ResetErrorStatusRequested?.Invoke();
             return Task.FromResult(new MethodResponse(0));

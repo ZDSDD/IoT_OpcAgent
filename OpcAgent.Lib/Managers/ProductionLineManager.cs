@@ -33,10 +33,12 @@ public class ProductionLineManager : BaseManager
         await _virtualDevice.InitializeHandlers();
         _virtualDevice.EmergencyStopRequested += EmergencyStop;
         _virtualDevice.ResetErrorStatusRequested += ResetErrorStatus;
-        await _virtualDevice.UpdateTwinAsync();
+        _virtualDevice.DesiredPropertyChangedRequested += SetProductionRate;
+        await _virtualDevice.UpdateErrorsAsync(GetErrors());
+        await _virtualDevice.UpdateProductionRateAsync(GetProductionRate());
     }
-    
-    public void SetProductionRate(int productionRate)
+
+    private void SetProductionRate(int productionRate)
     {
         OpcStatus result = _client.WriteNode($"{_nodeId}/{OpcEndpoint.ProductionRate}", productionRate);
         if (result.IsGood)
@@ -48,18 +50,62 @@ public class ProductionLineManager : BaseManager
     //todo:
     //  - single D2C message sent to IoT platform
     //  - current value must be stored in the Reported Device Twin
-    private static void HandleErrorsChanged(object sender, OpcDataChangeReceivedEventArgs e)
+    private async void HandleErrorsChanged(object sender, OpcDataChangeReceivedEventArgs e)
     {
         OpcMonitoredItem item = (OpcMonitoredItem)sender;
-
+        object errors = e.Item.Value.Value;
         Console.WriteLine(
             "Data Change from NodeId '{0}': {1}",
             item.NodeId,
-            (DeviceError)e.Item.Value.Value);
+            (DeviceError)errors);
 
         //send D2C message
-
+        await _virtualDevice.SendMessage(new PayloadData
+        {
+            ProductionStatus = GetProductionStatus(),
+            WorkorderId = GetWorkerId(),
+            GoodCount = GetGoodCount(),
+            BadCount = GetBadCount(),
+            Temperature = GetTemperature()
+        }, (int)errors);
+        
         //update device twin
+        await _virtualDevice.UpdateErrorsAsync((int)errors);
+    }
+
+    private int GetProductionStatus()
+    {
+        return (int)_client.ReadNode(_readValuesCommands[OpcEndpoint.ProductionStatus]).Value;
+    }
+
+    private string GetWorkerId()
+    {
+        return (string)_client.ReadNode(_readValuesCommands[OpcEndpoint.WorkorderId]).Value;
+    }
+
+    private long GetGoodCount()
+    {
+        return (long)_client.ReadNode(_readValuesCommands[OpcEndpoint.GoodCount]).Value;
+    }
+
+    private long GetBadCount()
+    {
+        return (long)_client.ReadNode(_readValuesCommands[OpcEndpoint.BadCount]).Value;
+    }
+
+    private double GetTemperature()
+    {
+        return (double)_client.ReadNode(_readValuesCommands[OpcEndpoint.Temperature]).Value;
+    }
+
+    private int GetProductionRate()
+    {
+        return (int)_client.ReadNode(_readValuesCommands[OpcEndpoint.ProductionRate]).Value;
+    }
+
+    private int GetErrors()
+    {
+        return (int)_client.ReadNode(_readValuesCommands[OpcEndpoint.DeviceError]).Value;
     }
 
     public void UpdateDeviceErrors()

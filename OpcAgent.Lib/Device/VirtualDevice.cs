@@ -3,6 +3,7 @@ using System.Text;
 using Microsoft.Azure.Devices.Client;
 using Microsoft.Azure.Devices.Shared;
 using Newtonsoft.Json;
+using OpcAgent.Lib.Enums;
 
 namespace OpcAgent.Lib.Device
 {
@@ -15,15 +16,20 @@ namespace OpcAgent.Lib.Device
 
         #region Sending Messages
 
-        public async Task SendMessages(PayloadData data)
+        public async Task SendMessage(PayloadData data, int errors)
         {
-                var dataString = JsonConvert.SerializeObject(data);
-                Message eventMessage = new Message(Encoding.UTF8.GetBytes(dataString));
-                eventMessage.ContentType = MediaTypeNames.Application.Json;
-                eventMessage.ContentEncoding = "utf-8";
-                Console.WriteLine($"\t{DateTime.Now.ToLocalTime()}> Sending message:\n Data: [{dataString}]");
-                await deviceClient.SendEventAsync(eventMessage);
-                eventMessage.Dispose();
+            var dataString = JsonConvert.SerializeObject(data);
+            Message eventMessage = new Message(Encoding.UTF8.GetBytes(dataString));
+            eventMessage.ContentType = MediaTypeNames.Application.Json;
+            eventMessage.ContentEncoding = "utf-8";
+            if (errors != 0)
+            {
+                eventMessage.Properties.Add("Errors",((DeviceError) errors).ToString());
+            }
+
+            Console.WriteLine($"\t{DateTime.Now.ToLocalTime()}> Sending message:\n Data: [{dataString}]");
+            await deviceClient.SendEventAsync(eventMessage);
+            eventMessage.Dispose();
             Console.WriteLine();
         }
 
@@ -58,14 +64,6 @@ namespace OpcAgent.Lib.Device
         #endregion Receiving Messages
 
         #region Direct Methods
-        public struct PayloadData
-        {
-            public int ProductionStatus { get; set; }
-            public string WorkorderId { get; set; }
-            public int GoodCount { get; set; }
-            public int BadCount { get; set; }
-            public float Temperature { get; set; }
-        }
 
         private static async Task<MethodResponse> DefaultServiceHandler(MethodRequest methodRequest, object userContext)
         {
@@ -94,14 +92,14 @@ namespace OpcAgent.Lib.Device
             await deviceClient.UpdateReportedPropertiesAsync(reportedProperties);
         }
 
-        private async Task OnDesiredPropertyChanged(TwinCollection desiredProperties, object userContext)
+        public async Task UpdateErrorsAsync(int errors)
         {
-            Console.WriteLine($"\tDesired property change:\n\t{JsonConvert.SerializeObject(desiredProperties)}");
-            Console.WriteLine("\tSending current time as reported property");
-            TwinCollection reportedProperties = new TwinCollection
-                {
-                    ["DateTimeLastDesiredPropertyChangeReceived"] = DateTime.Now
-                };
+            var reportedProperties = new TwinCollection
+            {
+                ["DeviceErrors"] = errors
+            };
+            await deviceClient.UpdateReportedPropertiesAsync(reportedProperties);
+        }
 
             await deviceClient.UpdateReportedPropertiesAsync(reportedProperties).ConfigureAwait(false);
         }

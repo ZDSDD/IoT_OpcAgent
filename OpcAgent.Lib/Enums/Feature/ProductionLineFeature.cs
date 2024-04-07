@@ -4,5 +4,7 @@ public enum ProductionLineFeature
 {
     Exit,
     LogAll,
-    EmergencyStop
+    EmergencyStop,
+    ResetErrorStatus,
+    UpdateDeviceErrors
 }

@@ -1,18 +1,20 @@
 ﻿using Microsoft.Azure.Devices.Common.Exceptions;
 using OpcAgent.Enums.Feature;
-using OpcAgent.Lib;
+using OpcAgent.Selector;
 
-namespace OpcAgent.Selector.Implementation;
+namespace OpcAgent.Lib.Selector.Implementation;
 
 internal class IoTHubFeatureSelector(IoTHubManager manager) : SelectorBase
 {
     public override void PrintMenu()
     {
-        Console.WriteLine(@"
-    1 - C2D
-    2 - Direct Method
-    3 - Device Twin
-    0 - Exit");
+        Console.WriteLine("""
+                          
+                              1 - C2D
+                              2 - Direct Method
+                              3 - Device Twin
+                              0 - Exit
+                          """);
     }
 
     public async Task Execute(IoTHubFeature ioTHubFeature)

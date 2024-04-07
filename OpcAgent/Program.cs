@@ -4,7 +4,7 @@ using Opc.UaFx.Client;
 using OpcAgent;
 using OpcAgent.Enums.Feature;
 using OpcAgent.Lib;
-using OpcAgent.Selector.Implementation;
+using OpcAgent.Lib.Selector.Implementation;
 
 
 IConfigurationRoot config = new ConfigurationBuilder()

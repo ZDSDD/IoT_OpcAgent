@@ -1,4 +1,4 @@
-﻿namespace OpcAgent.Lib;
+﻿namespace OpcAgent.Lib.Enums;
 
 public enum OpcEndpoint
 {

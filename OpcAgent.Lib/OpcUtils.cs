@@ -1,5 +1,7 @@
 ﻿using Opc.Ua;
 using Opc.UaFx;
+using Opc.UaFx.Client;
+using OpcAgent.Lib.Enums;
 
 namespace OpcAgent.Lib;
 

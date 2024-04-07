@@ -18,16 +18,12 @@ namespace OpcAgent.Lib.Device
 
         #region Sending Messages
 
-        public async Task SendMessage(PayloadData data, int errors)
+        public async Task SendMessage(object data)
         {
             var dataString = JsonConvert.SerializeObject(data);
             Message eventMessage = new Message(Encoding.UTF8.GetBytes(dataString));
             eventMessage.ContentType = MediaTypeNames.Application.Json;
             eventMessage.ContentEncoding = "utf-8";
-            if (errors != 0)
-            {
-                eventMessage.Properties.Add("Errors",((DeviceError) errors).ToString());
-            }
 
             Console.WriteLine($"\t{DateTime.Now.ToLocalTime()}> Sending message:\n Data: [{dataString}]");
             await deviceClient.SendEventAsync(eventMessage);

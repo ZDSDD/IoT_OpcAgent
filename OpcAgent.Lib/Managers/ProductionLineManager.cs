@@ -47,30 +47,31 @@ public class ProductionLineManager : BaseManager
         }
     }
 
-    //todo:
-    //  - single D2C message sent to IoT platform
-    //  - current value must be stored in the Reported Device Twin
     private async void HandleErrorsChanged(object sender, OpcDataChangeReceivedEventArgs e)
     {
         OpcMonitoredItem item = (OpcMonitoredItem)sender;
         object errors = e.Item.Value.Value;
-        Console.WriteLine(
-            "Data Change from NodeId '{0}': {1}",
-            item.NodeId,
-            (DeviceError)errors);
 
         //send D2C message
-        await _virtualDevice.SendMessage(new PayloadData
+        await _virtualDevice.SendMessage(new EventData
+        {
+            EventType = "Errors",
+            Message = ((DeviceError)errors).ToString()
+        });
+        //update device twin
+        await _virtualDevice.UpdateErrorsAsync((int)errors);
+    }
+
+    private async void SendTelemetryToCloud()
+    {
+        await _virtualDevice.SendMessage(new TelemetryData
         {
             ProductionStatus = GetProductionStatus(),
             WorkorderId = GetWorkerId(),
             GoodCount = GetGoodCount(),
             BadCount = GetBadCount(),
             Temperature = GetTemperature()
-        }, (int)errors);
-        
-        //update device twin
-        await _virtualDevice.UpdateErrorsAsync((int)errors);
+        });
     }
 
     private int GetProductionStatus()

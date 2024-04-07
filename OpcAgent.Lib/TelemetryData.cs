@@ -1,6 +1,6 @@
 ﻿namespace OpcAgent.Lib;
 
-public struct PayloadData
+public struct TelemetryData
 {
     public int ProductionStatus { get; set; }
     public string WorkorderId { get; set; }

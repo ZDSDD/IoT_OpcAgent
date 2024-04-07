@@ -7,6 +7,8 @@ using OpcAgent;
 using OpcAgent.Enums.Feature;
 using OpcAgent.Lib;
 using OpcAgent.Lib.Device;
+using OpcAgent.Lib.Managers;
+using OpcAgent.Lib.Managers.Mediator;
 using OpcAgent.Lib.Selector.Implementation;
 using TransportType = Microsoft.Azure.Devices.Client.TransportType;
 
@@ -37,6 +39,9 @@ string serviceConnectionString = config["IoTHub"];
 using var serviceClient = ServiceClient.CreateFromConnectionString(serviceConnectionString);
 using var registryManager = RegistryManager.CreateFromConnectionString(serviceConnectionString);
 var iotHubManager = new IoTHubManager(serviceClient, registryManager);
+
+//Initialize Mediator between Managers
+new ManagersMediator(iotHubManager, productionLineManager);
 
 //Initialize Selectors
 ProductionLineFeatureSelector selector = new ProductionLineFeatureSelector(productionLineManager);

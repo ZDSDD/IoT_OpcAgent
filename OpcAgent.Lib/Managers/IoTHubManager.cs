@@ -1,10 +1,10 @@
-﻿using Microsoft.Azure.Devices;
+﻿using System.Text;
+using Microsoft.Azure.Devices;
 using Newtonsoft.Json;
-using System.Text;
 
-namespace OpcAgent.Lib;
+namespace OpcAgent.Lib.Managers;
 
-public class IoTHubManager(ServiceClient client, RegistryManager registry)
+public class IoTHubManager(ServiceClient client, RegistryManager registry) : BaseManager
 {
     public async Task SendMessage(string messageText, string deviceId)
     {

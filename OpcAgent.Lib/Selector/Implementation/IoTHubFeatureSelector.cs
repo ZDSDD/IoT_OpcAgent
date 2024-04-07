@@ -1,5 +1,6 @@
 ﻿using Microsoft.Azure.Devices.Common.Exceptions;
 using OpcAgent.Enums.Feature;
+using OpcAgent.Lib.Managers;
 using OpcAgent.Selector;
 
 namespace OpcAgent.Lib.Selector.Implementation;

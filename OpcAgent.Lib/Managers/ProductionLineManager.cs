@@ -21,6 +21,7 @@ public class ProductionLineManager : BaseManager
         _client = client;
         _nodeId = nodeId;
         _virtualDevice = virtualDevice;
+        InitVirtualDevice();
         _readValuesCommands = OpcUtils.InitReadNodes(this._nodeId);
         _readAttributeCommands = OpcUtils.InitReadNameNodes(this._nodeId);
         _errorSubscription = client.SubscribeDataChange($"{nodeId}/{OpcEndpoint.DeviceError}", HandleErrorsChanged);
@@ -29,6 +30,8 @@ public class ProductionLineManager : BaseManager
     private async void InitVirtualDevice()
     {
         await _virtualDevice.InitializeHandlers();
+        _virtualDevice.EmergencyStopRequested += EmergencyStop;
+        _virtualDevice.ResetErrorStatusRequested += ResetErrorStatus;
         await _virtualDevice.UpdateTwinAsync();
     }
     

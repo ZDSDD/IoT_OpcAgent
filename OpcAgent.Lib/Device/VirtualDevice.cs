@@ -7,38 +7,23 @@ using Newtonsoft.Json;
 namespace OpcAgent.Lib.Device
 {
     public class VirtualDevice(DeviceClient deviceClient)
-    
+
     {
+        public DeviceClient DeviceClient => deviceClient;
+        public event Action EmergencyStopRequested;
+        public event Action ResetErrorStatusRequested;
+
         #region Sending Messages
 
-        public async Task SendMessages(int nrOfMessages, int delay)
+        public async Task SendMessages(PayloadData data)
         {
-            var rnd = new Random();
-
-            Console.WriteLine($"Device sending {nrOfMessages} messages to IoTHub...\n");
-
-            for (int count = 0; count < nrOfMessages; count++)
-            {
-                var data = new
-                {
-                    temperature = rnd.Next(20, 35),
-                    humidity = rnd.Next(60, 80),
-                    msgCount = count
-                };
-
                 var dataString = JsonConvert.SerializeObject(data);
-
                 Message eventMessage = new Message(Encoding.UTF8.GetBytes(dataString));
                 eventMessage.ContentType = MediaTypeNames.Application.Json;
                 eventMessage.ContentEncoding = "utf-8";
-                eventMessage.Properties.Add("temperatureAlert", (data.temperature > 30) ? "true" : "false");
-                Console.WriteLine($"\t{DateTime.Now.ToLocalTime()}> Sending message: {count}, Data: [{dataString}]");
-
+                Console.WriteLine($"\t{DateTime.Now.ToLocalTime()}> Sending message:\n Data: [{dataString}]");
                 await deviceClient.SendEventAsync(eventMessage);
-
-                if (count < nrOfMessages - 1)
-                    await Task.Delay(delay);
-            }
+                eventMessage.Dispose();
             Console.WriteLine();
         }
 
@@ -48,7 +33,8 @@ namespace OpcAgent.Lib.Device
 
         private async Task OnC2dMessageReceivedAsync(Message receivedMessage, object _)
         {
-            Console.WriteLine($"\t{DateTime.Now}> C2D message callback - message received with Id={receivedMessage.MessageId}.");
+            Console.WriteLine(
+                $"\t{DateTime.Now}> C2D message callback - message received with Id={receivedMessage.MessageId}.");
             PrintMessage(receivedMessage);
 
             await deviceClient.CompleteAsync(receivedMessage);
@@ -72,16 +58,13 @@ namespace OpcAgent.Lib.Device
         #endregion Receiving Messages
 
         #region Direct Methods
-
-        private async Task<MethodResponse> SendMessagesHandler(MethodRequest methodRequest, object userContext)
+        public struct PayloadData
         {
-            Console.WriteLine($"\tMETHOD EXECUTED: {methodRequest.Name}");
-
-            var payload = JsonConvert.DeserializeAnonymousType(methodRequest.DataAsJson, new { nrOfMessages = default(int), delay = default(int) });
-
-            await SendMessages(payload.nrOfMessages, payload.delay);
-
-            return new MethodResponse(0);
+            public int ProductionStatus { get; set; }
+            public string WorkorderId { get; set; }
+            public int GoodCount { get; set; }
+            public int BadCount { get; set; }
+            public float Temperature { get; set; }
         }
 
         private static async Task<MethodResponse> DefaultServiceHandler(MethodRequest methodRequest, object userContext)
@@ -101,7 +84,8 @@ namespace OpcAgent.Lib.Device
         {
             var twin = await deviceClient.GetTwinAsync();
 
-            Console.WriteLine($"\nInitial twin value received: \n{JsonConvert.SerializeObject(twin, Formatting.Indented)}");
+            Console.WriteLine(
+                $"\nInitial twin value received: \n{JsonConvert.SerializeObject(twin, Formatting.Indented)}");
             Console.WriteLine();
 
             var reportedProperties = new TwinCollection();
@@ -114,8 +98,10 @@ namespace OpcAgent.Lib.Device
         {
             Console.WriteLine($"\tDesired property change:\n\t{JsonConvert.SerializeObject(desiredProperties)}");
             Console.WriteLine("\tSending current time as reported property");
-            TwinCollection reportedProperties = new TwinCollection();
-            reportedProperties["DateTimeLastDesiredPropertyChangeReceived"] = DateTime.Now;
+            TwinCollection reportedProperties = new TwinCollection
+                {
+                    ["DateTimeLastDesiredPropertyChangeReceived"] = DateTime.Now
+                };
 
             await deviceClient.UpdateReportedPropertiesAsync(reportedProperties).ConfigureAwait(false);
         }
@@ -126,10 +112,24 @@ namespace OpcAgent.Lib.Device
         {
             await deviceClient.SetReceiveMessageHandlerAsync(OnC2dMessageReceivedAsync, deviceClient);
 
-            await deviceClient.SetMethodHandlerAsync("SendMessages", SendMessagesHandler, deviceClient);
+            await deviceClient.SetMethodHandlerAsync("EmergencyStop", EmergencyStopHandler, deviceClient);
+            
+            await deviceClient.SetMethodHandlerAsync("ResetErrorStatus", ResetErrorStatusHandler, deviceClient);
             await deviceClient.SetMethodDefaultHandlerAsync(DefaultServiceHandler, deviceClient);
 
             await deviceClient.SetDesiredPropertyUpdateCallbackAsync(OnDesiredPropertyChanged, deviceClient);
+        }
+
+        private Task<MethodResponse> ResetErrorStatusHandler(MethodRequest methodrequest, object usercontext)
+        {
+            ResetErrorStatusRequested?.Invoke();
+            return Task.FromResult(new MethodResponse(0));
+        }
+
+        private Task<MethodResponse> EmergencyStopHandler(MethodRequest methodRequest, object _)
+        {
+            EmergencyStopRequested?.Invoke();
+            return Task.FromResult(new MethodResponse(0));
         }
     }
 }

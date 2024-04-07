@@ -35,7 +35,7 @@ NodeId nodeId = new NodeId("ns=2;s=Device 1");
 ProductionLineManager productionLineManager = new ProductionLineManager(client, nodeId, device);
 
 //Initialize IoT Hub Manager
-string serviceConnectionString = config["IoTHub"];
+string serviceConnectionString = config.GetConnectionString("IoTHub");
 using var serviceClient = ServiceClient.CreateFromConnectionString(serviceConnectionString);
 using var registryManager = RegistryManager.CreateFromConnectionString(serviceConnectionString);
 var iotHubManager = new IoTHubManager(serviceClient, registryManager);
@@ -59,3 +59,4 @@ do
 client.Disconnect();
 await deviceClient.CloseAsync();
 await registryManager.CloseAsync();
+await serviceClient.CloseAsync();

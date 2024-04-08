@@ -3,6 +3,9 @@ using Opc.UaFx;
 using Opc.UaFx.Client;
 using OpcAgent.Lib.Device;
 using OpcAgent.Lib.Enums;
+using System;
+using System.Timers;
+using Timer = System.Timers.Timer;
 
 namespace OpcAgent.Lib.Managers;
 
@@ -11,7 +14,7 @@ public class ProductionLineManager : BaseManager
     private readonly OpcClient _client;
     private readonly NodeId _nodeId;
     private readonly VirtualDevice _virtualDevice;
-
+    private readonly Timer _telemetryTimer;
     private readonly Dictionary<OpcEndpoint, OpcReadNode> _readValuesCommands;
     private readonly Dictionary<OpcEndpoint, OpcReadNode> _readAttributeCommands;
     private readonly OpcSubscription _errorSubscription;
@@ -24,10 +27,18 @@ public class ProductionLineManager : BaseManager
         _readValuesCommands = OpcUtils.InitReadNodes(this._nodeId);
         _readAttributeCommands = OpcUtils.InitReadNameNodes(this._nodeId);
         _errorSubscription = client.SubscribeDataChange($"{nodeId}/{OpcEndpoint.DeviceError}", HandleErrorsChanged);
-
+        // Initialize telemetry timer with 20-second interval
+        _telemetryTimer = new Timer(20000); // 20 seconds in milliseconds
+        _telemetryTimer.Elapsed += OnTelemetryTimerElapsed;
+        _telemetryTimer.AutoReset = true;
+        _telemetryTimer.Start();
         InitVirtualDevice();
     }
-
+    private void OnTelemetryTimerElapsed(object sender, ElapsedEventArgs e)
+    {
+        // Handle telemetry data transmission
+        SendTelemetryToCloud();
+    }
     private async void InitVirtualDevice()
     {
         await _virtualDevice.InitializeHandlers();

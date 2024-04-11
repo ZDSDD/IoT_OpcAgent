@@ -13,7 +13,6 @@ public class ProductionLineFeatureSelector(ProductionLineManager manager) : Sele
                           1 - Log all info from device
                           2 - Emergency stop
                           3 - Reset error status
-                          4 - Update device errors
                           0 - Exit
                           """);
     }
@@ -30,9 +29,6 @@ public class ProductionLineFeatureSelector(ProductionLineManager manager) : Sele
                 break;
             case ProductionLineFeature.ResetErrorStatus:
                 manager.ResetErrorStatus();
-                break;
-            case ProductionLineFeature.UpdateDeviceErrors:
-                manager.UpdateDeviceErrors();
                 break;
             case ProductionLineFeature.Exit:
             default:

@@ -75,15 +75,6 @@ public class ProductionLineManager : BaseManager
         await _virtualDevice.UpdateErrorsAsync((int)errors);
     }
 
-
- 
-
-    public void UpdateDeviceErrors()
-    {
-        var a = _client.ReadNode(_readValuesCommands[OpcEndpoint.DeviceError]);
-        Console.WriteLine($"Current errors are: {(DeviceError)a.Value}");
-    }
-
     public void EmergencyStop()
     {
         object[] emergencyStopResult = _client.CallMethod(

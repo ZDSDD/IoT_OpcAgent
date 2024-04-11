@@ -3,9 +3,7 @@ using Opc.UaFx;
 using Opc.UaFx.Client;
 using OpcAgent.Lib.Device;
 using OpcAgent.Lib.Enums;
-using System.Timers;
 using Microsoft.Azure.Devices.Client;
-using Timer = System.Timers.Timer;
 
 namespace OpcAgent.Lib.Managers;
 
@@ -25,7 +23,7 @@ public class ProductionLineManager : BaseManager
         _client = client;
         _nodeId = nodeId;
         _virtualDevice = virtualDevice;
-        _readValuesCommands = OpcUtils.InitReadNodes(this._nodeId);
+        _readValuesCommands = OpcUtils.InitReadNodes(_nodeId);
         _readAttributeCommands = OpcUtils.InitReadNameNodes(this._nodeId);
         _opcRepository = new OpcRepository(_client, _readValuesCommands);
         _errorSubscription = client.SubscribeDataChange($"{nodeId}/{OpcEndpoint.DeviceError}", HandleErrorsChanged);
@@ -63,11 +61,10 @@ public class ProductionLineManager : BaseManager
 
     private async void HandleErrorsChanged(object sender, OpcDataChangeReceivedEventArgs e)
     {
-        OpcMonitoredItem item = (OpcMonitoredItem)sender;
         object errors = e.Item.Value.Value;
 
         //send D2C message
-        Message errorEventMessage = MessageService.PrepareMessage(this._telemetryService.GetCurrentTelemetryData());
+        Message errorEventMessage = MessageService.PrepareMessage(_telemetryService.GetCurrentTelemetryData());
         errorEventMessage.Properties.Add("ErrorEvent", "true");
         await _virtualDevice.SendMessage(errorEventMessage);
 

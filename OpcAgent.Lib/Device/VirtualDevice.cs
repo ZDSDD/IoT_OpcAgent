@@ -3,6 +3,7 @@ using System.Text;
 using Microsoft.Azure.Devices.Client;
 using Microsoft.Azure.Devices.Shared;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using OpcAgent.Lib.Enums;
 
 namespace OpcAgent.Lib.Device
@@ -10,24 +11,22 @@ namespace OpcAgent.Lib.Device
     public class VirtualDevice(DeviceClient deviceClient)
 
     {
+        private double _defaultSendFrequency = 60 * 5.0; //5 minutes
         public DeviceClient DeviceClient => deviceClient;
-        public event Action EmergencyStopRequested;
-        public event Action ResetErrorStatusRequested;
+        public event Action? EmergencyStopRequested;
+        public event Action? ResetErrorStatusRequested;
 
-        public event Action<int> DesiredPropertyChangedRequested;
+        public event Action<int>? DesiredProductionRateChanged;
+
+        public event Action<double>? DesiredSendFrequencyChanged;
 
         #region Sending Messages
 
-        public async Task SendMessage(object data)
+        public async Task SendMessage(Message message)
         {
-            var dataString = JsonConvert.SerializeObject(data);
-            Message eventMessage = new Message(Encoding.UTF8.GetBytes(dataString));
-            eventMessage.ContentType = MediaTypeNames.Application.Json;
-            eventMessage.ContentEncoding = "utf-8";
-
-            Console.WriteLine($"\t{DateTime.Now.ToLocalTime()}> Sending message:\n Data: [{dataString}]");
-            await deviceClient.SendEventAsync(eventMessage);
-            eventMessage.Dispose();
+            Console.WriteLine($"\t{DateTime.Now.ToLocalTime()}> Sending message");
+            await deviceClient.SendEventAsync(message);
+            message.Dispose();
             Console.WriteLine();
         }
 
@@ -96,9 +95,22 @@ namespace OpcAgent.Lib.Device
 
         private Task OnDesiredPropertyChanged(TwinCollection desiredProperties, object userContext)
         {
-            if (!desiredProperties.Contains("ProductionRate")) return Task.CompletedTask;
-            int desiredProductionRate = desiredProperties["ProductionRate"];
-            DesiredPropertyChangedRequested?.Invoke(desiredProductionRate);
+            if (desiredProperties.Contains("ProductionRate"))
+            {
+                int desiredProductionRate = desiredProperties["ProductionRate"];
+                DesiredProductionRateChanged?.Invoke(desiredProductionRate);
+            }
+
+            if (desiredProperties.Contains("telemetryConfig"))
+            {
+                var telemetryConfig = desiredProperties["telemetryConfig"] as JObject;
+                if (telemetryConfig != null && telemetryConfig.TryGetValue("sendFrequency", out var sendFrequency))
+                {
+                    DesiredSendFrequencyChanged?.Invoke(
+                        DeviceTwinPropertyParser.ConvertSendFrequencyToSeconds(sendFrequency.ToString()));
+                }
+            }
+
             return Task.CompletedTask;
         }
 
@@ -126,6 +138,29 @@ namespace OpcAgent.Lib.Device
         {
             EmergencyStopRequested?.Invoke();
             return Task.FromResult(new MethodResponse(0));
+        }
+
+        public async Task<double> GetSendFrequency()
+        {
+            var twin = await this.DeviceClient.GetTwinAsync();
+            var desiredProperties = twin.Properties.Desired;
+
+            if (!desiredProperties.Contains("telemetryConfig")) return _defaultSendFrequency;
+
+            var telemetryConfig = desiredProperties["telemetryConfig"] as JObject;
+
+            if (telemetryConfig == null || !telemetryConfig.TryGetValue("sendFrequency", out var sendFrequency))
+                return _defaultSendFrequency;
+            try
+            {
+                return DeviceTwinPropertyParser.ConvertSendFrequencyToSeconds(sendFrequency.ToString());
+            }
+            catch (ArgumentException argumentException)
+            {
+                Console.WriteLine(argumentException.ToString());
+            }
+
+            return _defaultSendFrequency;
         }
     }
 }

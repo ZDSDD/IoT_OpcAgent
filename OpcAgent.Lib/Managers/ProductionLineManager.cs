@@ -3,8 +3,8 @@ using Opc.UaFx;
 using Opc.UaFx.Client;
 using OpcAgent.Lib.Device;
 using OpcAgent.Lib.Enums;
-using System;
 using System.Timers;
+using Microsoft.Azure.Devices.Client;
 using Timer = System.Timers.Timer;
 
 namespace OpcAgent.Lib.Managers;
@@ -14,10 +14,11 @@ public class ProductionLineManager : BaseManager
     private readonly OpcClient _client;
     private readonly NodeId _nodeId;
     private readonly VirtualDevice _virtualDevice;
-    private readonly Timer _telemetryTimer;
     private readonly Dictionary<OpcEndpoint, OpcReadNode> _readValuesCommands;
     private readonly Dictionary<OpcEndpoint, OpcReadNode> _readAttributeCommands;
     private readonly OpcSubscription _errorSubscription;
+    private readonly TelemetryService _telemetryService;
+    private readonly OpcRepository _opcRepository;
 
     public ProductionLineManager(OpcClient client, NodeId nodeId, VirtualDevice virtualDevice)
     {
@@ -26,27 +27,29 @@ public class ProductionLineManager : BaseManager
         _virtualDevice = virtualDevice;
         _readValuesCommands = OpcUtils.InitReadNodes(this._nodeId);
         _readAttributeCommands = OpcUtils.InitReadNameNodes(this._nodeId);
+        _opcRepository = new OpcRepository(_client, _readValuesCommands);
         _errorSubscription = client.SubscribeDataChange($"{nodeId}/{OpcEndpoint.DeviceError}", HandleErrorsChanged);
-        // Initialize telemetry timer with 20-second interval
-        _telemetryTimer = new Timer(20000); // 20 seconds in milliseconds
-        _telemetryTimer.Elapsed += OnTelemetryTimerElapsed;
-        _telemetryTimer.AutoReset = true;
-        _telemetryTimer.Start();
         InitVirtualDevice();
+        _telemetryService = new TelemetryService(virtualDevice, _opcRepository);
     }
-    private void OnTelemetryTimerElapsed(object sender, ElapsedEventArgs e)
-    {
-        // Handle telemetry data transmission
-        SendTelemetryToCloud();
-    }
+
     private async void InitVirtualDevice()
     {
         await _virtualDevice.InitializeHandlers();
         _virtualDevice.EmergencyStopRequested += EmergencyStop;
         _virtualDevice.ResetErrorStatusRequested += ResetErrorStatus;
-        _virtualDevice.DesiredPropertyChangedRequested += SetProductionRate;
-        await _virtualDevice.UpdateErrorsAsync(GetErrors());
-        await _virtualDevice.UpdateProductionRateAsync(GetProductionRate());
+        _virtualDevice.DesiredProductionRateChanged += SetProductionRate;
+        _virtualDevice.DesiredSendFrequencyChanged += _telemetryService.SetTelemetryTime;
+        try
+        {
+            await _virtualDevice.UpdateErrorsAsync(_opcRepository.GetErrors());
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.ToString());
+        }
+
+        await _virtualDevice.UpdateProductionRateAsync(_opcRepository.GetProductionRate());
     }
 
     private void SetProductionRate(int productionRate)
@@ -72,52 +75,8 @@ public class ProductionLineManager : BaseManager
         await _virtualDevice.UpdateErrorsAsync((int)errors);
     }
 
-    private async void SendTelemetryToCloud()
-    {
-        await _virtualDevice.SendMessage(new TelemetryData
-        {
-            ProductionStatus = GetProductionStatus(),
-            WorkorderId = GetWorkerId(),
-            GoodCount = GetGoodCount(),
-            BadCount = GetBadCount(),
-            Temperature = GetTemperature()
-        });
-    }
 
-    private int GetProductionStatus()
-    {
-        return (int)_client.ReadNode(_readValuesCommands[OpcEndpoint.ProductionStatus]).Value;
-    }
-
-    private string GetWorkerId()
-    {
-        return (string)_client.ReadNode(_readValuesCommands[OpcEndpoint.WorkorderId]).Value;
-    }
-
-    private long GetGoodCount()
-    {
-        return (long)_client.ReadNode(_readValuesCommands[OpcEndpoint.GoodCount]).Value;
-    }
-
-    private long GetBadCount()
-    {
-        return (long)_client.ReadNode(_readValuesCommands[OpcEndpoint.BadCount]).Value;
-    }
-
-    private double GetTemperature()
-    {
-        return (double)_client.ReadNode(_readValuesCommands[OpcEndpoint.Temperature]).Value;
-    }
-
-    private int GetProductionRate()
-    {
-        return (int)_client.ReadNode(_readValuesCommands[OpcEndpoint.ProductionRate]).Value;
-    }
-
-    private int GetErrors()
-    {
-        return (int)_client.ReadNode(_readValuesCommands[OpcEndpoint.DeviceError]).Value;
-    }
+ 
 
     public void UpdateDeviceErrors()
     {

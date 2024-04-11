@@ -77,14 +77,14 @@ public class ProductionLineManager : BaseManager
 
     public void EmergencyStop()
     {
-        object[] emergencyStopResult = _client.CallMethod(
+        _client.CallMethod(
             _nodeId,
             $"{_nodeId}/{OpcEndpoint.EmergencyStop}");
     }
 
     public void ResetErrorStatus()
     {
-        object[] result = _client.CallMethod(
+        _client.CallMethod(
             _nodeId,
             $"{_nodeId}/{OpcEndpoint.ResetErrorStatus}");
     }

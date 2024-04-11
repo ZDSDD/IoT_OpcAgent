@@ -64,11 +64,10 @@ public class ProductionLineManager : BaseManager
         object errors = e.Item.Value.Value;
 
         //send D2C message
-        await _virtualDevice.SendMessage(new EventData
-        {
-            EventType = "Errors",
-            Message = ((DeviceError)errors).ToString()
-        });
+        Message errorEventMessage = MessageService.PrepareMessage(this._telemetryService.GetCurrentTelemetryData());
+        errorEventMessage.Properties.Add("ErrorEvent", "true");
+        await _virtualDevice.SendMessage(errorEventMessage);
+
         //update device twin
         await _virtualDevice.UpdateErrorsAsync((int)errors);
     }

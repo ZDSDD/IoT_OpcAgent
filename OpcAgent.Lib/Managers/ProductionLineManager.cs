@@ -64,7 +64,8 @@ public class ProductionLineManager : BaseManager
         object errors = e.Item.Value.Value;
 
         //send D2C message
-        Message errorEventMessage = MessageService.PrepareMessage(_telemetryService.GetCurrentTelemetryData());
+        string errorsValue = ((DeviceError)errors).ToString();
+        Message errorEventMessage = MessageService.PrepareMessage(new { errors = errorsValue});
         errorEventMessage.Properties.Add("ErrorEvent", "true");
         await _virtualDevice.SendMessage(errorEventMessage);
 

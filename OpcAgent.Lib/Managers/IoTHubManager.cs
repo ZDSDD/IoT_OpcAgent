@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 
 namespace OpcAgent.Lib.Managers;
 
-public class IoTHubManager(ServiceClient client, RegistryManager registry) : BaseManager
+public class IoTHubManager(ServiceClient client, RegistryManager registry)  
 {
     public async Task SendMessage(string messageText, string deviceId)
     {

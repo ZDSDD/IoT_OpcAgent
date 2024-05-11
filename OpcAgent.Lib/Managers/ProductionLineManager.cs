@@ -7,95 +7,12 @@ using Microsoft.Azure.Devices.Client;
 
 namespace OpcAgent.Lib.Managers;
 
-public class ProductionLineManager : BaseManager
+public class ProductionLineManager
 {
-    private readonly OpcClient _client;
-    private readonly NodeId _nodeId;
-    private readonly VirtualDevice _virtualDevice;
-    private readonly Dictionary<OpcEndpoint, OpcReadNode> _readValuesCommands;
-    private readonly Dictionary<OpcEndpoint, OpcReadNode> _readAttributeCommands;
-    private readonly OpcSubscription _errorSubscription;
-    private readonly TelemetryService _telemetryService;
-    private readonly OpcRepository _opcRepository;
+    private List<VirtualDevice> _devices = [];
 
-    public ProductionLineManager(OpcClient client, NodeId nodeId, VirtualDevice virtualDevice)
+    public void AddDevice(VirtualDevice virtualDevice)
     {
-        _client = client;
-        _nodeId = nodeId;
-        _virtualDevice = virtualDevice;
-        _readValuesCommands = OpcUtils.InitReadNodes(_nodeId);
-        _readAttributeCommands = OpcUtils.InitReadNameNodes(this._nodeId);
-        _opcRepository = new OpcRepository(_client, _readValuesCommands);
-        _errorSubscription = client.SubscribeDataChange($"{nodeId}/{OpcEndpoint.DeviceError}", HandleErrorsChanged);
-        InitVirtualDevice();
-        _telemetryService = new TelemetryService(virtualDevice, _opcRepository);
-    }
-
-    private async void InitVirtualDevice()
-    {
-        await _virtualDevice.InitializeHandlers();
-        _virtualDevice.EmergencyStopRequested += EmergencyStop;
-        _virtualDevice.ResetErrorStatusRequested += ResetErrorStatus;
-        _virtualDevice.DesiredProductionRateChanged += SetProductionRate;
-        _virtualDevice.DesiredSendFrequencyChanged += _telemetryService.SetTelemetryTime;
-        try
-        {
-            await _virtualDevice.UpdateErrorsAsync(_opcRepository.GetErrors());
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e.ToString());
-        }
-
-        await _virtualDevice.UpdateProductionRateAsync(_opcRepository.GetProductionRate());
-    }
-
-    private void SetProductionRate(int productionRate)
-    {
-        OpcStatus result = _client.WriteNode($"{_nodeId}/{OpcEndpoint.ProductionRate}", productionRate);
-        if (result.IsGood)
-        {
-            Console.WriteLine("Production rate successfully changed");
-        }
-    }
-
-    private async void HandleErrorsChanged(object sender, OpcDataChangeReceivedEventArgs e)
-    {
-        object errors = e.Item.Value.Value;
-
-        //send D2C message
-        string errorsValue = ((DeviceError)errors).ToString();
-        Message errorEventMessage = MessageService.PrepareMessage(new { errors = errorsValue});
-        errorEventMessage.Properties.Add("ErrorEvent", "true");
-        await _virtualDevice.SendMessage(errorEventMessage);
-
-        //update device twin
-        await _virtualDevice.UpdateErrorsAsync((int)errors);
-    }
-
-    public void EmergencyStop()
-    {
-        _client.CallMethod(
-            _nodeId,
-            $"{_nodeId}/{OpcEndpoint.EmergencyStop}");
-    }
-
-    public void ResetErrorStatus()
-    {
-        _client.CallMethod(
-            _nodeId,
-            $"{_nodeId}/{OpcEndpoint.ResetErrorStatus}");
-    }
-
-    public void LogAllInfo()
-    {
-        IEnumerable<OpcValue> job = _client.ReadNodes(_readValuesCommands.Values.ToArray());
-        IEnumerable<OpcValue> jobName = _client.ReadNodes(_readAttributeCommands.Values.ToArray());
-        var valuesAndNames = job.Zip(jobName, (first, second) => second + ": " + first);
-        Console.WriteLine();
-        foreach (var item in valuesAndNames)
-        {
-            Console.WriteLine(item);
-        }
+        _devices.Add(virtualDevice);
     }
 }

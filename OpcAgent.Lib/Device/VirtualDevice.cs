@@ -1,166 +1,255 @@
-﻿using System.Net.Mime;
-using System.Text;
+﻿using System.Text;
 using Microsoft.Azure.Devices.Client;
 using Microsoft.Azure.Devices.Shared;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Opc.Ua;
+using Opc.UaFx;
+using Opc.UaFx.Client;
 using OpcAgent.Lib.Enums;
 
-namespace OpcAgent.Lib.Device
+namespace OpcAgent.Lib.Device;
+
+public class VirtualDevice
 {
-    public class VirtualDevice(DeviceClient deviceClient)
+    private readonly NodeId _nodeId;
 
+    private const double DefaultSendFrequency = 60 * 5.0; //5 minutes
+    private DeviceClient _deviceClient;
+
+    private TelemetryService _telemetryService;
+
+    private readonly OpcClient _client;
+    private OpcRepository _opcRepository;
+
+    public VirtualDevice(string deviceConnectionString, NodeId nodeId, OpcClient opcClient)
     {
-        private double _defaultSendFrequency = 60 * 5.0; //5 minutes
-        public DeviceClient DeviceClient => deviceClient;
-        public event Action? EmergencyStopRequested;
-        public event Action? ResetErrorStatusRequested;
+        _nodeId = nodeId;
+        _client = opcClient;
+        SetDeviceClient(deviceConnectionString);
+        InitVirtualDevice();
+    }
 
-        public event Action<int>? DesiredProductionRateChanged;
+    ~VirtualDevice()
+    {
+        _deviceClient.DisposeAsync();
+    }
 
-        public event Action<double>? DesiredSendFrequencyChanged;
+    private async void SetDeviceClient(string deviceConnectionString)
+    {
+        _deviceClient = DeviceClient.CreateFromConnectionString(deviceConnectionString, TransportType.Mqtt);
+        await _deviceClient.OpenAsync();
+        _opcRepository = new OpcRepository(_client, OpcUtils.InitReadNodes(_nodeId));
+        _telemetryService = new TelemetryService(this, _opcRepository);
+    }
 
-        #region Sending Messages
+    #region Sending Messages
 
-        public async Task SendMessage(Message message)
+    public async Task SendMessage(Message message)
+    {
+        Console.WriteLine($"\t{DateTime.Now.ToLocalTime()}> Sending message. {_nodeId}");
+        await _deviceClient.SendEventAsync(message);
+        message.Dispose();
+    }
+
+    #endregion Sending Messages
+
+    #region Receiving Messages
+
+    private async Task OnC2dMessageReceivedAsync(Message receivedMessage, object _)
+    {
+        PrintMessage(receivedMessage);
+        await _deviceClient.CompleteAsync(receivedMessage);
+        receivedMessage.Dispose();
+    }
+
+    private void PrintMessage(Message receivedMessage)
+    {
+        string messageData = Encoding.ASCII.GetString(receivedMessage.GetBytes());
+        Console.WriteLine($"\t{_nodeId}\tReceived message: {messageData}");
+
+        int propCount = 0;
+        foreach (var prop in receivedMessage.Properties)
         {
-            Console.WriteLine($"\t{DateTime.Now.ToLocalTime()}> Sending message");
-            await deviceClient.SendEventAsync(message);
-            message.Dispose();
-            Console.WriteLine();
+            Console.WriteLine($"\t\tProperty[{propCount++}> Key={prop.Key} : Value={prop.Value}");
+        }
+    }
+
+    #endregion Receiving Messages
+
+    #region Direct Methods
+
+    private static async Task<MethodResponse> DefaultServiceHandler(MethodRequest methodRequest, object userContext)
+    {
+        Console.WriteLine($"\tMETHOD EXECUTED: {methodRequest.Name}");
+
+        await Task.Delay(1000);
+
+        return new MethodResponse(0);
+    }
+
+    #endregion Direct Methods
+
+    #region Device Twin
+
+    private async Task UpdateProductionRateAsync(int productionRate)
+    {
+        var reportedProperties = new TwinCollection
+        {
+            ["ProductionRate"] = productionRate
+        };
+        await _deviceClient.UpdateReportedPropertiesAsync(reportedProperties);
+    }
+
+    private async Task UpdateErrorsAsync(int errors)
+    {
+        var reportedProperties = new TwinCollection
+        {
+            ["DeviceErrors"] = errors
+        };
+        await _deviceClient.UpdateReportedPropertiesAsync(reportedProperties);
+    }
+
+    private Task OnDesiredPropertyChanged(TwinCollection desiredProperties, object userContext)
+    {
+        if (desiredProperties.Contains("ProductionRate"))
+        {
+            int desiredProductionRate = desiredProperties["ProductionRate"];
+            SetProductionRate(desiredProductionRate);
         }
 
-        #endregion Sending Messages
-
-        #region Receiving Messages
-
-        private async Task OnC2dMessageReceivedAsync(Message receivedMessage, object _)
+        if (desiredProperties.Contains("telemetryConfig"))
         {
-            Console.WriteLine(
-                $"\t{DateTime.Now}> C2D message callback - message received with Id={receivedMessage.MessageId}.");
-            PrintMessage(receivedMessage);
-
-            await deviceClient.CompleteAsync(receivedMessage);
-            Console.WriteLine($"\t{DateTime.Now}> Completed C2D message with Id={receivedMessage.MessageId}.");
-
-            receivedMessage.Dispose();
-        }
-
-        private void PrintMessage(Message receivedMessage)
-        {
-            string messageData = Encoding.ASCII.GetString(receivedMessage.GetBytes());
-            Console.WriteLine($"\t\tReceived message: {messageData}");
-
-            int propCount = 0;
-            foreach (var prop in receivedMessage.Properties)
-            {
-                Console.WriteLine($"\t\tProperty[{propCount++}> Key={prop.Key} : Value={prop.Value}");
-            }
-        }
-
-        #endregion Receiving Messages
-
-        #region Direct Methods
-
-        private static async Task<MethodResponse> DefaultServiceHandler(MethodRequest methodRequest, object userContext)
-        {
-            Console.WriteLine($"\tMETHOD EXECUTED: {methodRequest.Name}");
-
-            await Task.Delay(1000);
-
-            return new MethodResponse(0);
-        }
-
-        #endregion Direct Methods
-
-        #region Device Twin
-
-        public async Task UpdateProductionRateAsync(int productionRate)
-        {
-            var reportedProperties = new TwinCollection
-            {
-                ["ProductionRate"] = productionRate
-            };
-            await deviceClient.UpdateReportedPropertiesAsync(reportedProperties);
-        }
-
-        public async Task UpdateErrorsAsync(int errors)
-        {
-            var reportedProperties = new TwinCollection
-            {
-                ["DeviceErrors"] = errors
-            };
-            await deviceClient.UpdateReportedPropertiesAsync(reportedProperties);
-        }
-
-        private Task OnDesiredPropertyChanged(TwinCollection desiredProperties, object userContext)
-        {
-            if (desiredProperties.Contains("ProductionRate"))
-            {
-                int desiredProductionRate = desiredProperties["ProductionRate"];
-                DesiredProductionRateChanged?.Invoke(desiredProductionRate);
-            }
-
-            if (desiredProperties.Contains("telemetryConfig"))
-            {
-                var telemetryConfig = desiredProperties["telemetryConfig"] as JObject;
-                if (telemetryConfig != null && telemetryConfig.TryGetValue("sendFrequency", out var sendFrequency))
-                {
-                    DesiredSendFrequencyChanged?.Invoke(
-                        DeviceTwinPropertyParser.ConvertSendFrequencyToSeconds(sendFrequency.ToString()));
-                }
-            }
-
-            return Task.CompletedTask;
-        }
-
-        #endregion Device Twin
-
-        public async Task InitializeHandlers()
-        {
-            await deviceClient.SetReceiveMessageHandlerAsync(OnC2dMessageReceivedAsync, deviceClient);
-
-            await deviceClient.SetMethodHandlerAsync("EmergencyStop", EmergencyStopHandler, deviceClient);
-
-            await deviceClient.SetMethodHandlerAsync("ResetErrorStatus", ResetErrorStatusHandler, deviceClient);
-            await deviceClient.SetMethodDefaultHandlerAsync(DefaultServiceHandler, deviceClient);
-
-            await deviceClient.SetDesiredPropertyUpdateCallbackAsync(OnDesiredPropertyChanged, deviceClient);
-        }
-
-        private Task<MethodResponse> ResetErrorStatusHandler(MethodRequest methodRequest, object usercontext)
-        {
-            ResetErrorStatusRequested?.Invoke();
-            return Task.FromResult(new MethodResponse(0));
-        }
-
-        private Task<MethodResponse> EmergencyStopHandler(MethodRequest methodRequest, object _)
-        {
-            EmergencyStopRequested?.Invoke();
-            return Task.FromResult(new MethodResponse(0));
-        }
-
-        public async Task<double> GetSendFrequency()
-        {
-            var twin = await this.DeviceClient.GetTwinAsync();
-            var desiredProperties = twin.Properties.Desired;
-
-            if (!desiredProperties.Contains("telemetryConfig")) return _defaultSendFrequency;
-
             var telemetryConfig = desiredProperties["telemetryConfig"] as JObject;
-
-            if (telemetryConfig == null || !telemetryConfig.TryGetValue("sendFrequency", out var sendFrequency))
-                return _defaultSendFrequency;
-            try
+            if (telemetryConfig != null && telemetryConfig.TryGetValue("sendFrequency", out var sendFrequency))
             {
-                return DeviceTwinPropertyParser.ConvertSendFrequencyToSeconds(sendFrequency.ToString());
+                _telemetryService.SetTelemetryTime(
+                    DeviceTwinPropertyParser.ConvertSendFrequencyToSeconds(sendFrequency.ToString()));
             }
-            catch (ArgumentException argumentException)
-            {
-                Console.WriteLine(argumentException.ToString());
-            }
-
-            return _defaultSendFrequency;
         }
+
+        return Task.CompletedTask;
+    }
+
+    #endregion Device Twin
+
+    private async Task InitializeHandlers()
+    {
+        await _deviceClient.SetReceiveMessageHandlerAsync(OnC2dMessageReceivedAsync, _deviceClient);
+
+        await _deviceClient.SetMethodHandlerAsync("EmergencyStop", EmergencyStopHandler, _deviceClient);
+
+        await _deviceClient.SetMethodHandlerAsync("ResetErrorStatus", ResetErrorStatusHandler, _deviceClient);
+        await _deviceClient.SetMethodDefaultHandlerAsync(DefaultServiceHandler, _deviceClient);
+
+        await _deviceClient.SetDesiredPropertyUpdateCallbackAsync(OnDesiredPropertyChanged, _deviceClient);
+    }
+
+
+    private async void InitVirtualDevice()
+    {
+        await InitializeHandlers();
+        try
+        {
+            await UpdateErrorsAsync(_opcRepository.GetErrors());
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.ToString());
+        }
+
+        var twin = await _deviceClient.GetTwinAsync();
+        if (twin.Properties.Desired.Contains("ProductionRate"))
+        {
+            int productionRate = twin.Properties.Desired["ProductionRate"];
+            SetProductionRate(productionRate);
+        }
+        await UpdateProductionRateAsync(_opcRepository.GetProductionRate());
+        _client.SubscribeDataChange($"{_nodeId}/{OpcEndpoint.DeviceError}", HandleErrorsChanged);
+    }
+
+    private void SetProductionRate(int productionRate)
+    {
+        OpcStatus result = _client.WriteNode($"{_nodeId}/{OpcEndpoint.ProductionRate}", productionRate);
+        if (result.IsGood)
+        {
+            Console.WriteLine($"{_nodeId}Production rate successfully changed to: {productionRate}");
+        }
+        else
+        {
+            Console.WriteLine($"{_nodeId}Could not change production rate.");
+        }
+    }
+
+    private async void HandleErrorsChanged(object sender, OpcDataChangeReceivedEventArgs e)
+    {
+        object errors = e.Item.Value.Value;
+
+        //send D2C message
+        string errorsValue = ((DeviceError)errors).ToString();
+        Message errorEventMessage = MessageService.PrepareMessage(new { errors = errorsValue });
+        errorEventMessage.Properties.Add("ErrorEvent", "true");
+        await SendMessage(errorEventMessage);
+
+        //update device twin
+        await UpdateErrorsAsync((int)errors);
+    }
+
+
+    public async Task<double> GetSendFrequency()
+    {
+        var twin = await this._deviceClient.GetTwinAsync();
+        var desiredProperties = twin.Properties.Desired;
+
+        if (!desiredProperties.Contains("telemetryConfig")) return DefaultSendFrequency;
+
+        var telemetryConfig = desiredProperties["telemetryConfig"] as JObject;
+
+        if (telemetryConfig == null || !telemetryConfig.TryGetValue("sendFrequency", out var sendFrequency))
+            return DefaultSendFrequency;
+        try
+        {
+            return DeviceTwinPropertyParser.ConvertSendFrequencyToSeconds(sendFrequency.ToString());
+        }
+        catch (ArgumentException argumentException)
+        {
+            Console.WriteLine(argumentException.ToString());
+        }
+
+        return DefaultSendFrequency;
+    }
+
+    private Task<MethodResponse>? ResetErrorStatusHandler(MethodRequest methodRequest, object _)
+    {
+        try
+        {
+            _client.CallMethod(
+                _nodeId,
+                $"{_nodeId}/{OpcEndpoint.ResetErrorStatus}");
+        }
+        catch (Exception exception)
+        {
+            Console.WriteLine($"{_nodeId}: exception occured during ResetErrorStatus: {exception}");
+            return Task.FromException(exception) as Task<MethodResponse>;
+        }
+
+        return Task.FromResult(new MethodResponse(0));
+    }
+
+
+    private Task<MethodResponse>? EmergencyStopHandler(MethodRequest methodRequest, object _)
+    {
+        try
+        {
+            _client.CallMethod(
+                _nodeId,
+                $"{_nodeId}/{OpcEndpoint.EmergencyStop}");
+        }
+        catch (Exception exception)
+        {
+            Console.WriteLine($"{_nodeId}: exception occured during emergency stop: {exception}");
+            return Task.FromException(exception) as Task<MethodResponse>;
+        }
+
+        return Task.FromResult(new MethodResponse(0));
     }
 }

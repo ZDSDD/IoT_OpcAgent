@@ -36,14 +36,30 @@ public class TelemetryService
         SendTelemetryToCloud(GetCurrentTelemetryData());
     }
 
-    internal TelemetryData GetCurrentTelemetryData()
+    private long _lastTotalGoodCount = 0;
+    private long _lastTotalBadCount = 0;
+
+    private TelemetryData GetCurrentTelemetryData()
     {
+        long totalGoodCount = _repository.GetGoodCount();
+        if (totalGoodCount < _lastTotalGoodCount) _lastTotalGoodCount = 0;
+        long goodCount = totalGoodCount - _lastTotalGoodCount;
+
+        long totalBadCount = _repository.GetBadCount();
+        if (totalBadCount < _lastTotalBadCount) _lastTotalBadCount = 0;
+        long badCount = totalBadCount - _lastTotalBadCount;
+
+        _lastTotalGoodCount = totalGoodCount;
+        _lastTotalBadCount = totalBadCount;
+        
         return new TelemetryData
         {
             ProductionStatus = _repository.GetProductionStatus(),
             WorkorderId = _repository.GetWorkerId(),
-            GoodCount = _repository.GetGoodCount(),
-            BadCount = _repository.GetBadCount(),
+            GoodCount = goodCount,
+            BadCount = badCount,
+            TotalGoodCount = totalGoodCount,
+            TotalBadCount = totalBadCount,
             Temperature = _repository.GetTemperature()
         };
     }

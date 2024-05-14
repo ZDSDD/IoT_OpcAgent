@@ -17,9 +17,10 @@ public class VirtualDevice
     private DeviceClient _deviceClient;
 
     private TelemetryService _telemetryService;
-
+    public Action<string, int, bool> OnErrorsChange;
     private readonly OpcClient _client;
     private OpcRepository _opcRepository;
+    private int _lastErrorsValue = 0;
 
     public VirtualDevice(string deviceConnectionString, NodeId nodeId, OpcClient opcClient)
     {
@@ -144,7 +145,6 @@ public class VirtualDevice
         await _deviceClient.SetDesiredPropertyUpdateCallbackAsync(OnDesiredPropertyChanged, _deviceClient);
     }
 
-
     private async void InitVirtualDevice()
     {
         await InitializeHandlers();
@@ -163,6 +163,7 @@ public class VirtualDevice
             int productionRate = twin.Properties.Desired["ProductionRate"];
             SetProductionRate(productionRate);
         }
+
         await UpdateProductionRateAsync(_opcRepository.GetProductionRate());
         _client.SubscribeDataChange($"{_nodeId}/{OpcEndpoint.DeviceError}", HandleErrorsChanged);
     }
@@ -170,30 +171,32 @@ public class VirtualDevice
     private void SetProductionRate(int productionRate)
     {
         OpcStatus result = _client.WriteNode($"{_nodeId}/{OpcEndpoint.ProductionRate}", productionRate);
-        if (result.IsGood)
-        {
-            Console.WriteLine($"{_nodeId}Production rate successfully changed to: {productionRate}");
-        }
-        else
-        {
-            Console.WriteLine($"{_nodeId}Could not change production rate.");
-        }
+        Console.WriteLine(result.IsGood
+            ? $"{_nodeId}Production rate successfully changed to: {productionRate}"
+            : $"{_nodeId}Could not change production rate.");
     }
 
+    // Send D2C message and handle errors change
     private async void HandleErrorsChanged(object sender, OpcDataChangeReceivedEventArgs e)
     {
         object errors = e.Item.Value.Value;
-
-        //send D2C message
-        string errorsValue = ((DeviceError)errors).ToString();
-        Message errorEventMessage = MessageService.PrepareMessage(new { errors = errorsValue });
-        errorEventMessage.Properties.Add("ErrorEvent", "true");
+        int errorsValue = (int)errors;
+        bool errorsIncreased = _lastErrorsValue < errorsValue;
+        _lastErrorsValue = errorsValue;
+    
+        Message errorEventMessage = MessageService.PrepareMessage(new
+        { 
+            Errors = errorsValue, 
+            DeviceNode = _nodeId.Identifier, 
+            Event = "error",
+            ErrorsIncreased = errorsIncreased ? 1 : 0
+        });
         await SendMessage(errorEventMessage);
-
-        //update device twin
+    
+        OnErrorsChange.Invoke(this._nodeId.ToString(), errorsValue, errorsIncreased);
+    
         await UpdateErrorsAsync((int)errors);
     }
-
 
     public async Task<double> GetSendFrequency()
     {
@@ -234,7 +237,6 @@ public class VirtualDevice
 
         return Task.FromResult(new MethodResponse(0));
     }
-
 
     private Task<MethodResponse>? EmergencyStopHandler(MethodRequest methodRequest, object _)
     {

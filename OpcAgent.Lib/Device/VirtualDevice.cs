@@ -14,12 +14,12 @@ public class VirtualDevice
     private readonly NodeId _nodeId;
 
     private const double DefaultSendFrequency = 60 * 5.0; //5 minutes
-    private DeviceClient _deviceClient;
+    private DeviceClient _deviceClient = null!;
 
-    private TelemetryService _telemetryService;
-    public Action<string, int, bool> OnErrorsChange;
+    private TelemetryService _telemetryService = null!;
+    public Action<string, int, bool> OnErrorsChange = null!;
     private readonly OpcClient _client;
-    private OpcRepository _opcRepository;
+    private OpcRepository _opcRepository = null!;
     private int _lastErrorsValue = 0;
 
     public VirtualDevice(string deviceConnectionString, NodeId nodeId, OpcClient opcClient)

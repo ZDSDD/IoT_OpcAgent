@@ -12,15 +12,18 @@ public class TelemetryService
 {
     private readonly VirtualDevice _virtualDevice;
 
-    private Timer _telemetryTimer;
+    private Timer _telemetryTimer = null!;
 
     private readonly OpcRepository _repository;
+
+    private double defaultTelemetryInterval;
 
     public TelemetryService(VirtualDevice virtualDevice, OpcRepository repository)
     {
         _virtualDevice = virtualDevice;
-        InitTelemetryTimer();
+        InitializeTelemetryTimer();
         _repository = repository;
+        defaultTelemetryInterval = 10;
     }
 
     private async void SendTelemetryToCloud(TelemetryData data)
@@ -30,7 +33,7 @@ public class TelemetryService
         await _virtualDevice.SendMessage(telemetryMessage);
     }
 
-    private void OnTelemetryTimerElapsed(object sender, ElapsedEventArgs e)
+    private void OnTelemetryTimerElapsed(object? sender, ElapsedEventArgs e)
     {
         // Handle telemetry data transmission
         SendTelemetryToCloud(GetCurrentTelemetryData());
@@ -64,13 +67,26 @@ public class TelemetryService
         };
     }
 
-    private async void InitTelemetryTimer()
+    private async void InitializeTelemetryTimer()
     {
-        double telemetryInterval = await _virtualDevice.GetSendFrequency();
-        _telemetryTimer = new Timer(ToMilliseconds(telemetryInterval)); // 20 seconds in milliseconds
-        _telemetryTimer.Elapsed += OnTelemetryTimerElapsed;
-        _telemetryTimer.AutoReset = true;
-        _telemetryTimer.Start();
+        try
+        {
+            double telemetryInterval = await _virtualDevice.GetSendFrequency();
+            _telemetryTimer = new Timer(ToMilliseconds(telemetryInterval));
+            _telemetryTimer.Start();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            _telemetryTimer = new Timer(ToMilliseconds(defaultTelemetryInterval));
+            _telemetryTimer.Start();
+        }
+        finally
+        {
+            _telemetryTimer.Elapsed += OnTelemetryTimerElapsed;
+            _telemetryTimer.AutoReset = true;
+        }
+
     }
 
     private double ToMilliseconds(double seconds)

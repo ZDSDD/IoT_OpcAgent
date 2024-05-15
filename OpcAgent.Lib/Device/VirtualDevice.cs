@@ -92,20 +92,11 @@ public class VirtualDevice
 
     #region Device Twin
 
-    private async Task UpdateProductionRateAsync(int productionRate)
+    private async Task UpdateReportedDeviceTwinPropertyAsync(string propertyName, dynamic value)
     {
         var reportedProperties = new TwinCollection
         {
-            ["ProductionRate"] = productionRate
-        };
-        await _deviceClient.UpdateReportedPropertiesAsync(reportedProperties);
-    }
-
-    private async Task UpdateErrorsAsync(int errors)
-    {
-        var reportedProperties = new TwinCollection
-        {
-            ["DeviceErrors"] = errors
+            [propertyName] = value
         };
         await _deviceClient.UpdateReportedPropertiesAsync(reportedProperties);
     }
@@ -150,7 +141,7 @@ public class VirtualDevice
         await InitializeHandlers();
         try
         {
-            await UpdateErrorsAsync(_opcRepository.GetErrors());
+            await UpdateReportedDeviceTwinPropertyAsync("DeviceErrors", _opcRepository.GetErrors());
         }
         catch (Exception e)
         {
@@ -164,7 +155,7 @@ public class VirtualDevice
             SetProductionRate(productionRate);
         }
 
-        await UpdateProductionRateAsync(_opcRepository.GetProductionRate());
+        await UpdateReportedDeviceTwinPropertyAsync("ProductionRate", _opcRepository.GetProductionRate());
         _client.SubscribeDataChange($"{_nodeId}/{OpcEndpoint.DeviceError}", HandleErrorsChanged);
     }
 
@@ -174,6 +165,7 @@ public class VirtualDevice
         Console.WriteLine(result.IsGood
             ? $"{_nodeId}Production rate successfully changed to: {productionRate}"
             : $"{_nodeId}Could not change production rate.");
+        _ = UpdateReportedDeviceTwinPropertyAsync("ProductionRate", _opcRepository.GetProductionRate());
     }
 
     // Send D2C message and handle errors change
@@ -183,19 +175,19 @@ public class VirtualDevice
         int errorsValue = (int)errors;
         bool errorsIncreased = _lastErrorsValue < errorsValue;
         _lastErrorsValue = errorsValue;
-    
+
         Message errorEventMessage = MessageService.PrepareMessage(new
-        { 
-            Errors = errorsValue, 
-            DeviceNode = _nodeId.Identifier, 
+        {
+            Errors = errorsValue,
+            DeviceNode = _nodeId.Identifier,
             Event = "error",
             ErrorsIncreased = errorsIncreased ? 1 : 0
         });
         await SendMessage(errorEventMessage);
-    
+
         OnErrorsChange.Invoke(this._nodeId.ToString(), errorsValue, errorsIncreased);
-    
-        await UpdateErrorsAsync((int)errors);
+
+        await UpdateReportedDeviceTwinPropertyAsync("DeviceErrors", (int)errors);
     }
 
     public async Task<double> GetSendFrequency()

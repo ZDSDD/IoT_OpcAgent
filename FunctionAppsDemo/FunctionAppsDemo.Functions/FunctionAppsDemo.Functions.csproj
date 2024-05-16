@@ -5,6 +5,7 @@
     <UserSecretsId>867bc8f9-5bfc-4f0b-b285-ef293738a70b</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Azure.Communication.Email" Version="1.0.1" />
     <PackageReference Include="Azure.Identity" Version="1.11.3" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.19.1" />
     <PackageReference Include="Microsoft.Azure.Devices" Version="1.39.1" />

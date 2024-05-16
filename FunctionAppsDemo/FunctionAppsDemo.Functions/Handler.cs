@@ -4,24 +4,22 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Azure.Communication.Email;
 using FunctionAppsDemo.Functions.Model;
 using Microsoft.Azure.Devices;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace FunctionAppsDemo.Functions
 {
     internal static class Handler
     {
-        public static async Task HandleBlobs(string blobServiceConnectionString, 
+        public static async Task HandleBlobs(string blobServiceConnectionString,
             BinaryData message,
             ILogger log,
-            String  blobName,
+            String blobName,
             String blobContainerName)
         {
-
             BlobServiceClient blobServiceClient = new BlobServiceClient(blobServiceConnectionString);
             var containerClient = blobServiceClient.GetBlobContainerClient(blobContainerName);
 
@@ -53,7 +51,6 @@ namespace FunctionAppsDemo.Functions
                     log.LogWarning("Was some other exception" + ex.Message);
                 }
             }
-
         }
 
         private static async Task AppendBlob(BinaryData message, BlobClient blob)
@@ -72,8 +69,9 @@ namespace FunctionAppsDemo.Functions
             using var stream = new MemoryStream(Encoding.UTF8.GetBytes(existingContent));
             await blob.UploadAsync(stream, true);
         }
-        
-        public static async Task HandleDesiredProductionRate(ProductionMessage data, string serviceConnectionString, ILogger log)
+
+        public static async Task HandleDesiredProductionRate(ProductionMessage data, string serviceConnectionString,
+            ILogger log)
         {
             // Setup connection to Azure services
             using var serviceClient = ServiceClient.CreateFromConnectionString(serviceConnectionString);
@@ -83,13 +81,18 @@ namespace FunctionAppsDemo.Functions
             int currentDesiredProductionRate = await manager.GetDesiredTwinValue(data.DeviceId, "ProductionRate");
             if (currentDesiredProductionRate == 0)
             {
-                log.LogInformation($"{data.DeviceId}\tcurrent Desired Production Rate is uqual to 0. There is no need to furher decrease it.");
+                log.LogInformation(
+                    $"{data.DeviceId}\tcurrent Desired Production Rate is uqual to 0. There is no need to furher decrease it.");
                 return;
             }
-            if(data.TotalGoodCount == 0 && data.TotalBadCount == 0){
-                log.LogInformation($"{data.DeviceId}\tGoodCount and BadCount was both equal 0. Likely the device hasn't started yet");
+
+            if (data.TotalGoodCount == 0 && data.TotalBadCount == 0)
+            {
+                log.LogInformation(
+                    $"{data.DeviceId}\tGoodCount and BadCount was both equal 0. Likely the device hasn't started yet");
                 return;
             }
+
             // Calculate the ratio between total [good producs / total products]
             float denominator = data.TotalGoodCount + data.TotalBadCount;
 
@@ -99,14 +102,15 @@ namespace FunctionAppsDemo.Functions
             float ratio = (data.TotalGoodCount / denominator) * 100.0f;
             bool shouldDecreaseProductionRate = ratio < 90f;
 
-            if (!shouldDecreaseProductionRate ){
-
+            if (!shouldDecreaseProductionRate)
+            {
                 log.LogInformation($"{data.DeviceId} ratio was: {ratio}.\tNo need to decrease desired production rate");
                 return;
             }
             else
             {
-                log.LogInformation($"{data.DeviceId} ratio was: {ratio}.\tProceeding to decrease desired production rate");
+                log.LogInformation(
+                    $"{data.DeviceId} ratio was: {ratio}.\tProceeding to decrease desired production rate");
             }
 
             //Finaly, update the desired twin. Don't go below 0!
@@ -116,6 +120,24 @@ namespace FunctionAppsDemo.Functions
                 currentDesiredProductionRate <= 10
                     ? 0
                     : currentDesiredProductionRate - 10);
+        }
+
+        public static async Task SendEmail(ILogger log, String toEmail, string text)
+        {
+            // This code retrieves your connection string from an environment variable.
+            string connectionString = System.Environment.GetEnvironmentVariable("CommunicationServiceConnectionString");
+            var emailClient = new EmailClient(connectionString);
+
+            log.LogInformation("Preparing email to send...");
+            EmailSendOperation emailSendOperation = await emailClient.SendAsync(
+                WaitUntil.Completed,
+                senderAddress: System.Environment.GetEnvironmentVariable("senderAddress"),
+                recipientAddress: toEmail,
+                subject: "Test Email",
+                htmlContent: $"<html><h1>{text}</h1l></html>",
+                plainTextContent: text);
+            await emailSendOperation.WaitForCompletionAsync();
+            log.LogInformation("Email send successfully!");
         }
     }
 }

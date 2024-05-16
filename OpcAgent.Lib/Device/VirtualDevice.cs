@@ -9,7 +9,10 @@ using OpcAgent.Lib.Enums;
 
 namespace OpcAgent.Lib.Device;
 
-public class VirtualDevice
+/// <summary>
+/// Represents a virtual device that mediates between Azure IoT Hub and the <see cref="OpcClient"/>.
+/// </summary>
+public class VirtualDevice : IDisposable
 {
     private readonly NodeId _nodeId;
 
@@ -32,9 +35,13 @@ public class VirtualDevice
 
     ~VirtualDevice()
     {
-        _deviceClient.DisposeAsync();
+        Dispose(false);
     }
 
+    /// <summary>
+    /// Sets up the device client using the provided device connection string.
+    /// </summary>
+    /// <param name="deviceConnectionString">The connection string for the device.</param>
     private async void SetDeviceClient(string deviceConnectionString)
     {
         _deviceClient = DeviceClient.CreateFromConnectionString(deviceConnectionString, TransportType.Mqtt);
@@ -45,6 +52,11 @@ public class VirtualDevice
 
     #region Sending Messages
 
+    /// <summary>
+    /// Sends a message asynchronously using the device client.
+    /// </summary>
+    /// <param name="message">The message to send.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     public async Task SendMessage(Message message)
     {
         Console.WriteLine($"\t{DateTime.Now.ToLocalTime()}> Sending message. {_nodeId}");
@@ -81,7 +93,7 @@ public class VirtualDevice
 
     private static async Task<MethodResponse> DefaultServiceHandler(MethodRequest methodRequest, object userContext)
     {
-        Console.WriteLine($"\tMETHOD EXECUTED: {methodRequest.Name}");
+        Console.WriteLine($"\tMETHOD EXECUTED: {methodRequest.Name}. It does nothing : ) ");
 
         await Task.Delay(1000);
 
@@ -92,6 +104,12 @@ public class VirtualDevice
 
     #region Device Twin
 
+    /// <summary>
+    /// Updates a reported property in the device twin asynchronously.
+    /// </summary>
+    /// <param name="propertyName">The name of the property to update.</param>
+    /// <param name="value">The value to set for the property.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     private async Task UpdateReportedDeviceTwinPropertyAsync(string propertyName, dynamic value)
     {
         var reportedProperties = new TwinCollection
@@ -101,6 +119,12 @@ public class VirtualDevice
         await _deviceClient.UpdateReportedPropertiesAsync(reportedProperties);
     }
 
+    /// <summary>
+    /// Handles changes in desired properties of the device twin.
+    /// </summary>
+    /// <param name="desiredProperties">The desired properties collection.</param>
+    /// <param name="userContext">The user context.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     private Task OnDesiredPropertyChanged(TwinCollection desiredProperties, object userContext)
     {
         if (desiredProperties.Contains("ProductionRate"))
@@ -124,6 +148,10 @@ public class VirtualDevice
 
     #endregion Device Twin
 
+    /// <summary>
+    /// Initializes message handlers, method handlers, and property update callbacks for the device client.
+    /// </summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     private async Task InitializeHandlers()
     {
         await _deviceClient.SetReceiveMessageHandlerAsync(OnC2dMessageReceivedAsync, _deviceClient);
@@ -136,6 +164,9 @@ public class VirtualDevice
         await _deviceClient.SetDesiredPropertyUpdateCallbackAsync(OnDesiredPropertyChanged, _deviceClient);
     }
 
+    /// <summary>
+    /// Initializes the virtual device, including setting up handlers and updating device twin properties.
+    /// </summary>
     private async void InitVirtualDevice()
     {
         await InitializeHandlers();
@@ -158,7 +189,11 @@ public class VirtualDevice
         await UpdateReportedDeviceTwinPropertyAsync("ProductionRate", _opcRepository.GetProductionRate());
         _client.SubscribeDataChange($"{_nodeId}/{OpcEndpoint.DeviceError}", HandleErrorsChanged);
     }
-
+    
+    /// <summary>
+    /// Sets the production rate for the device and updated DeviceTwin reported 'ProductionRate' property. 
+    /// </summary>
+    /// <param name="productionRate">The new production rate value.</param>
     private void SetProductionRate(int productionRate)
     {
         OpcStatus result = _client.WriteNode($"{_nodeId}/{OpcEndpoint.ProductionRate}", productionRate);
@@ -168,7 +203,11 @@ public class VirtualDevice
         _ = UpdateReportedDeviceTwinPropertyAsync("ProductionRate", _opcRepository.GetProductionRate());
     }
 
-    // Send D2C message and handle errors change
+    /// <summary>
+    /// Sends a device-to-cloud (D2C) message and handles changes in errors. Invokes OnErrorChange
+    /// </summary>
+    /// <param name="sender">The sender object.</param>
+    /// <param name="e">The event arguments containing the changed data.</param>
     private async void HandleErrorsChanged(object sender, OpcDataChangeReceivedEventArgs e)
     {
         object errors = e.Item.Value.Value;
@@ -190,6 +229,10 @@ public class VirtualDevice
         await UpdateReportedDeviceTwinPropertyAsync("DeviceErrors", (int)errors);
     }
 
+    /// <summary>
+    /// Retrieves the telemetry send frequency from the device twin.
+    /// </summary>
+    /// <returns>A <see cref="Task{TResult}"/> representing the asynchronous operation and containing the send frequency in seconds.</returns>
     public async Task<double> GetSendFrequency()
     {
         var twin = await this._deviceClient.GetTwinAsync();
@@ -212,7 +255,13 @@ public class VirtualDevice
 
         return DefaultSendFrequency;
     }
-
+    
+    /// <summary>
+    /// Handles the invocation of the "ResetErrorStatus" direct method.
+    /// </summary>
+    /// <param name="methodRequest">The method request.</param>
+    /// <param name="_">The user context.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation and containing the method response.</returns>
     private Task<MethodResponse>? ResetErrorStatusHandler(MethodRequest methodRequest, object _)
     {
         try
@@ -230,6 +279,12 @@ public class VirtualDevice
         return Task.FromResult(new MethodResponse(0));
     }
 
+    /// <summary>
+    /// Handles the invocation of the "EmergencyStop" direct method.
+    /// </summary>
+    /// <param name="methodRequest">The method request.</param>
+    /// <param name="_">The user context.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation and containing the method response.</returns>
     private Task<MethodResponse>? EmergencyStopHandler(MethodRequest methodRequest, object _)
     {
         try
@@ -245,5 +300,26 @@ public class VirtualDevice
         }
 
         return Task.FromResult(new MethodResponse(0));
+    }
+
+    private void ReleaseUnmanagedResources()
+    {
+        // TODO release unmanaged resources here
+    }
+
+    private void Dispose(bool disposing)
+    {
+        ReleaseUnmanagedResources();
+        if (disposing)
+        {
+            _deviceClient.Dispose();
+            _client.Dispose();
+        }
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
     }
 }

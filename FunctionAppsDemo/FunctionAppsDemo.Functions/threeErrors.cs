@@ -18,8 +18,19 @@ using Azure;
 
 namespace FunctionAppsDemo.Functions
 {
-    public class threeErrors
+    /// <summary>
+    /// Represents a class responsible for processing messages related to three errors received from a Service Bus queue.
+    /// </summary>
+    public class ThreeErrors
     {
+        /// <summary>
+        /// Handles the processing of messages related to three errors in uner a minute received from a Service Bus queue.
+        /// </summary>
+        /// <param name="message">The received Service Bus message containing the three errors data.</param>
+        /// <param name="messageActions">The actions to perform on the Service Bus message.</param>
+        /// <param name="log">The logger instance for logging information.</param>
+        /// <param name="context">The execution context for the function.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
         [FunctionName("threeErrors")]
         public async Task RunAsync(
             [ServiceBusTrigger("%QueueNameThreeErrors%", Connection = "ServiceBusConnectionString")]

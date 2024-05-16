@@ -13,8 +13,19 @@ using Azure.Communication.Email;
 
 namespace FunctionAppsDemo.Functions;
 
+/// <summary>
+/// Represents a class responsible for handling error events received from a Service Bus queue.
+/// </summary>
 public class ErrorEvent
 {
+    /// <summary>
+    /// Handles the processing of error events received from a Service Bus queue.
+    /// </summary>
+    /// <param name="message">The received Service Bus message containing the error event data.</param>
+    /// <param name="messageActions">The actions to perform on the Service Bus message.</param>
+    /// <param name="log">The logger instance for logging information.</param>
+    /// <param name="context">The execution context for the function.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
     [FunctionName("ErrorEvent")]
     public async Task Run(
         [ServiceBusTrigger("%QueueNameErrorEvent%", Connection = "ServiceBusConnectionString")]
@@ -30,28 +41,27 @@ public class ErrorEvent
         if (data == null || ReferenceEquals(null, data.errors))
         {
             await messageActions.DeadLetterMessageAsync(message);
+            return;
+        }
+
+        if (data.increased == "true")
+        {
+            List<string> recipientEmails = new List<string>
+            {
+                // "Recipient1@example.com",
+                // "Recipient2@example.com",
+            };
+            foreach (String email in recipientEmails)
+            {
+                await Handler.SendEmail(log, email, $"There was an error with{data.deviceNodeId}\n" +
+                                                    $"Device error code: {data.errors}");
+            }
         }
         else
         {
-            if (data.increased == "true")
-            {
-                List<string> recipientEmails = new List<string>
-                {
-                    // "Recipient1@example.com",
-                    // "Recipient2@example.com",
-                };
-                foreach (String email in recipientEmails)
-                {
-                    await Handler.SendEmail(log, email, $"There was an error with{data.deviceNodeId}\n" +
-                                                        $"Device error code: {data.errors}");
-                }
-            }
-            else
-            {
-                log.LogInformation("Error event indicates either a decrease in errors or the absence of errors.");
-            }
-
-            await messageActions.CompleteMessageAsync(message);
+            log.LogInformation("Error event indicates either a decrease in errors or the absence of errors.");
         }
+
+        await messageActions.CompleteMessageAsync(message);
     }
 }

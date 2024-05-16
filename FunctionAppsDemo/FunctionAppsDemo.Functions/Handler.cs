@@ -14,6 +14,15 @@ namespace FunctionAppsDemo.Functions
 {
     internal static class Handler
     {
+        /// <summary>
+        /// Handles the processing of blobs, including appending data to an existing blob or uploading a new blob if it doesn't exist.
+        /// </summary>
+        /// <param name="blobServiceConnectionString">The connection string for the blob service.</param>
+        /// <param name="message">The binary data to be appended to an existing blob or uploaded as a new blob.</param>
+        /// <param name="log">The logger instance for logging information.</param>
+        /// <param name="blobName">The name of the blob to handle.</param>
+        /// <param name="blobContainerName">The name of the blob container where the blob is located.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
         public static async Task HandleBlobs(string blobServiceConnectionString,
             BinaryData message,
             ILogger log,
@@ -53,6 +62,13 @@ namespace FunctionAppsDemo.Functions
             }
         }
 
+        /// <summary>
+        /// Appends binary data to an existing blob.
+        /// If the blob already exists, downloads its content, appends the new message, and uploads the updated content back to the blob.
+        /// </summary>
+        /// <param name="message">The binary data to append to the blob.</param>
+        /// <param name="blob">The BlobClient representing the blob to which the data will be appended.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
         private static async Task AppendBlob(BinaryData message, BlobClient blob)
         {
             // If the blob already exists, download its content
@@ -69,7 +85,15 @@ namespace FunctionAppsDemo.Functions
             using var stream = new MemoryStream(Encoding.UTF8.GetBytes(existingContent));
             await blob.UploadAsync(stream, true);
         }
-
+        
+        /// <summary>
+        /// Adjusts the desired production rate based on the current production data.
+        /// If the production rate drops below 90%, decreases the desired production rate by 10 points.
+        /// </summary>
+        /// <param name="data">The production message containing the current production data.</param>
+        /// <param name="serviceConnectionString">The connection string for the service.</param>
+        /// <param name="log">The logger instance for logging information.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
         public static async Task HandleDesiredProductionRate(ProductionMessage data, string serviceConnectionString,
             ILogger log)
         {

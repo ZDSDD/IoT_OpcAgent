@@ -11,13 +11,26 @@ using System.Text;
 
 namespace FunctionAppsDemo.Functions
 {
+    /// <summary>
+    /// Represents a class responsible for processing production rate messages received from a Service Bus queue.
+    /// </summary>
     public class ProductionRate
     {
+        /// <summary>
+        /// Handles the processing of production rate messages received from a Service Bus queue.
+        /// </summary>
+        /// <param name="message">The received Service Bus message containing the production rate data.</param>
+        /// <param name="messageActions">The actions to perform on the Service Bus message.</param>
+        /// <param name="log">The logger instance for logging information.</param>
+        /// <param name="context">The execution context for the function.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
         [FunctionName("ProductionRate")]
         public async Task RunAsync(
             [ServiceBusTrigger("%QueueNameProduction%", Connection = "ServiceBusConnectionString")]
             ServiceBusReceivedMessage message,
-            ServiceBusMessageActions messageActions, ILogger log, ExecutionContext context)
+            ServiceBusMessageActions messageActions,
+            ILogger log,
+            ExecutionContext context)
         {
             var myQueueItem = Encoding.UTF8.GetString(message.Body);
 
@@ -50,7 +63,5 @@ namespace FunctionAppsDemo.Functions
                 System.Environment.GetEnvironmentVariable("productionBlobContainerName"));
             await messageActions.CompleteMessageAsync(message);
         }
-
-
     }
 }

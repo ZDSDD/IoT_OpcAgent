@@ -59,7 +59,7 @@ namespace FunctionAppsDemo.Functions
                 System.Environment.GetEnvironmentVariable("Storage"),
                 message.Body,
                 log,
-                $"{data.DeviceId}_{data.WindowStartTime}",
+                $"{data.DeviceId}_{DateTime.Now.Date.ToShortDateString()}.json",
                 System.Environment.GetEnvironmentVariable("productionBlobContainerName"));
             await messageActions.CompleteMessageAsync(message);
         }

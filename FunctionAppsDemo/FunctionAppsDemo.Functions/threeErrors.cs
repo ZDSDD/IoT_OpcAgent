@@ -61,7 +61,7 @@ namespace FunctionAppsDemo.Functions
                 await Handler.HandleBlobs(System.Environment.GetEnvironmentVariable("Storage"), 
                     message.Body,
                     log,
-                    $"{data.ConnectionDeviceId}_{DateTime.UtcNow}",
+                    $"{data.ConnectionDeviceId}_{DateTime.Now.Date.ToShortDateString()}.json",
                     System.Environment.GetEnvironmentVariable("ThreeErrorsBlobContainerName"));
                 log.LogInformation("Firing 'EmergencyStop' method");
                 await manager.ExecuteDeviceMethod("EmergencyStop", data.ConnectionDeviceId);

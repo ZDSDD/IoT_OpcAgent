@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using System.Text.Json;
 using Microsoft.Azure.Devices.Client;
 using Microsoft.Azure.Devices.Shared;
 using Newtonsoft.Json.Linq;
@@ -115,7 +116,7 @@ public class VirtualDevice : IDisposable
     /// <param name="methodRequest">The method request.</param>
     /// <param name="_">The user context.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation and containing the method response.</returns>
-    private Task<MethodResponse>? ResetErrorStatusHandler(MethodRequest methodRequest, object _)
+    private Task<MethodResponse> ResetErrorStatusHandler(MethodRequest methodRequest, object _)
     {
         try
         {
@@ -125,11 +126,23 @@ public class VirtualDevice : IDisposable
         }
         catch (Exception exception)
         {
-            Console.WriteLine($"{_nodeId}: exception occured during ResetErrorStatus: {exception}");
-            return Task.FromException(exception) as Task<MethodResponse>;
+            Console.WriteLine($"{_nodeId}: exception occured during Reset Error Status : {exception.Message}");
+        
+            var errorResponse = MethodResponseHelper.CreateResponse(500, new
+            {
+                message = $"{_nodeId}: exception occured during Reset Error Status.",
+                exception_message = exception.Message
+            }, 500);
+        
+            return Task.FromResult(errorResponse);
         }
 
-        return Task.FromResult(new MethodResponse(0));
+        var successResponse = MethodResponseHelper.CreateResponse(200, new
+        {
+            message = "Reset Error Status handled successfully."
+        }, 200);
+    
+        return Task.FromResult(successResponse);
     }
 
     /// <summary>
@@ -138,7 +151,7 @@ public class VirtualDevice : IDisposable
     /// <param name="methodRequest">The method request.</param>
     /// <param name="_">The user context.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation and containing the method response.</returns>
-    private Task<MethodResponse>? EmergencyStopHandler(MethodRequest methodRequest, object _)
+    private Task<MethodResponse> EmergencyStopHandler(MethodRequest methodRequest, object _)
     {
         try
         {
@@ -148,12 +161,25 @@ public class VirtualDevice : IDisposable
         }
         catch (Exception exception)
         {
-            Console.WriteLine($"{_nodeId}: exception occured during emergency stop: {exception}");
-            return Task.FromException(exception) as Task<MethodResponse>;
+            Console.WriteLine($"{_nodeId}: exception occured during emergency stop: {exception.Message}");
+        
+            var errorResponse = MethodResponseHelper.CreateResponse(500, new
+            {
+                message = $"{_nodeId}: exception occured during emergency stop.",
+                exception_message = exception.Message
+            }, 500);
+        
+            return Task.FromResult(errorResponse);
         }
 
-        return Task.FromResult(new MethodResponse(0));
+        var successResponse = MethodResponseHelper.CreateResponse(200, new
+        {
+            message = "Emergency stop handled successfully."
+        }, 200);
+    
+        return Task.FromResult(successResponse);
     }
+
 
     #endregion Direct Methods
 
@@ -234,6 +260,7 @@ public class VirtualDevice : IDisposable
         }
 
         await UpdateReportedDeviceTwinPropertyAsync("ProductionRate", _opcRepository.GetProductionRate());
+        this._lastErrorsValue = _opcRepository.GetErrors();
         _opcClient.SubscribeDataChange($"{_nodeId}/{OpcEndpoint.DeviceError}", HandleErrorsChanged);
     }
 

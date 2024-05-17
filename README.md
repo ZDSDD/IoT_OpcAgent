@@ -12,6 +12,10 @@ IoT Agent written in .NET It integrates on-premise devices with Azure-based IoT 
 Provide a brief overview of the project. Describe its purpose and main features.
 
 ## Installation
+
+###
+
+### Download the project
 Download zip file or run commads from your favourite CLI
 ```bash
 git clone https://github.com/ZDSDD/IoT_OpcAgent.git
@@ -76,12 +80,16 @@ GROUP BY
 
 ## Usage
 ### Direct methods
-+ 
-+ 
-#### 
++ [EmergencyStop](#emergencystop)
++ [ResetErrorStatus](#reseterrorstatus)
+
+#### EmergencyStop
+Calls the "EmergencyStop" method on a given device. It stops production. It can fire when a device experiences 3 errors in under a minute.
+#### ResetErrorStatus
+Calls the "ResetErrorStatus" method on a given device. It resets every error there is.
 
 ## Configuration
-This section will show what local variables are need to be set up, both on Azure App and on OPC Agent.
+This section will show which local variables need to be set up, both on Azure App and on the OPC Agent.
 ### Sample settings for LOCAL development
 This sample local.settings.json file should be located in the root folder of the solution.
 
@@ -104,12 +112,11 @@ This sample local.settings.json file should be located in the root folder of the
   }
 }
 ```
-### Deploy on Azure Function App
-In deployed Function App on Azure, under Settings -> Environment variables -> [ Add application setting ].
-Here is oficial microsoft documentation on how to set up app setings on Azure: [link](https://learn.microsoft.com/en-us/azure/app-service/reference-app-settings)
+### Deploy on Azure 
+If deployed on Azure, navigate to Settings -> Environment variables -> **Add application setting**. For official Microsoft documentation on setting up app settings on Azure, refer to the following link: [link](https://learn.microsoft.com/en-us/azure/app-service/reference-app-settings)
 
-### Local configuration for IoT Agent
-You need to supply .net `secrets.json` file. [How to init secrets](https://learn.microsoft.com/pl-pl/aspnet/core/security/app-secrets)
+### Local Configuration for IoT Agent
+To configure the IoT Agent locally, you must provide the .NET `secrets.json` file. [How to init secrets](https://learn.microsoft.com/pl-pl/aspnet/core/security/app-secrets)
 ```
 {
   "ConnectionStrings": {

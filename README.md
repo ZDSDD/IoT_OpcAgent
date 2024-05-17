@@ -44,7 +44,8 @@ This sample local.settings.json file should be located in the root folder of the
     "IoTHubConnectionString": "<my_IoTHuB_connection_string>",
     "Storage": "<my_storage_connection_string>",
     "CommunicationServiceConnectionString": "<my_communication_service_connection_string>",
-    "senderAddress": "<email_that_sends_emails>"
+    "senderAddress": "<email_that_sends_emails>",
+    "emailTo": "<some@mail.com>"
   }
 }
 ```
@@ -57,25 +58,25 @@ To configure the IoT Agent locally, you must provide the `secrets.json` file for
 ```
 {
   "ConnectionStrings": {
-    "serverAddress": "server_adress", //i.e. 
+    "serverAddress": "<server_adress>", //i.e. "opc.tcp://localhost:4840/", 
     "IoTHub": "<IoTHub_connection_string>",
     "ServiceBus": "<serviceBus connection string>"
   },
   "Devices": [
     {
-      "DeviceNodeId": "ns=2;s=Device 1",
+      "DeviceNodeId": "<device_node_id>", // i.e. "DeviceNodeId": "ns=2;s=Device 1"
       "DeviceConnectionString": "<iot_hub_device_connection_string1>"
     },
     {
-      "DeviceNodeId": "ns=2;s=Device 2",
+      "DeviceNodeId": "<device_node_id>",
       "DeviceConnectionString": "<iot_hub_device_connection_string2>"
     },
     {
-      "DeviceNodeId": "ns=2;s=Device 3",
+      "DeviceNodeId": "<device_node_id>",
       "DeviceConnectionString": "<iot_hub_device_connection_string4>"
     },
     {
-      "DeviceNodeId": "ns=2;s=Device 4",
+      "DeviceNodeId": "<device_node_id>",
       "DeviceConnectionString": "<iot_hub_device_connection_string5>"
     }
   //... and more devices as you need.
@@ -87,7 +88,7 @@ To configure the IoT Agent locally, you must provide the `secrets.json` file for
 In order for our buissness logic to work, we need to utilize ASA on Azure. 
 > Azure Stream Analytics is a fully managed stream processing engine that is designed to analyze and process large volumes of streaming data with sub-millisecond latencies. - *Microsoft*
 
-That's how query should look like.
+That's how the query should look like.
 
 ```sql
 /*
@@ -143,6 +144,33 @@ GROUP BY
     IoTHub.ConnectionDeviceId,
     TumblingWindow(minute, 5)
 ```
+
+### Containers
+To store data calculations, there is need to create containers on storage acount. That where data calculation will be stored.
+
+### Temperatures data calculations
+> Every 1 minute give me the average, minimum and maximum temperature over the last 5 minutes (grouped by device).\
+> See query 1
+#### Sample temperatures data stored in the container as blob.
+```
+{"WindowStartTime":"2024-05-17T19:10:00.0000000Z","ConnectionDeviceId":"device2","AverageTemperature":61.00682340912079,"MinTemperature":60.42769792801131,"MaxTemperature":61.86731380333519}
+```
+### Errors calculation
+> Situations whenever a device experiences more than 3 errors in under 1 minute.
+> See ASA query 2
+#### Sample errors data
+```
+{"EventTime":"2024-05-17T19:35:00.0000000Z","ConnectionDeviceId":"device3"}
+```
+### Production KPIs
+> % of good production in total volume, grouped by device in 5-minute windows.
+> See ASA query 3
+
+#### Sample Production KPIs data
+```
+{"WindowStartTime":"2024-05-17T19:35:00.0000000Z","DeviceId":"device4","TotalGoodCount":0.0,"TotalBadCount":0.0}
+```
+
 ### Device Twin
 Sample device twin on Azure IoT Hub 
 ```
@@ -176,11 +204,12 @@ Sample device twin on Azure IoT Hub
 
 ## How it works
 ### Connection to the device (OPC UA server)
-"The agent retrieves device connection data from `secrets.json` and attempts to establish a connection. It will reject a device if there is no connection available."
+The agent retrieves device connection data from `secrets.json` and attempts to establish a connection. It will reject a device if there is no connection available.
 
 ### Telemetry
 Agent sends telemetry data to the IoT Hub at fixed time intervals configured in the device twin on Azure. You can configure it under "properties" -> "desired" -> "telemetryConfig" ->__"sendFrequency"__.\
-Example values: `10s`, `5m`, `2h`, `1420s`, `96m`.
+Example values: `10s`, `5m`, `2h`, `1420s`, `96m`.\
+ContentEncoding: `UTF8`
 
 #### Sample device twin config
 ```
@@ -217,6 +246,7 @@ Example values: `10s`, `5m`, `2h`, `1420s`, `96m`.
   "enqueuedTime": "Fri May 17 2024 17:29:38 GMT+0200 (czas środkowoeuropejski letni)"
 }
 ```
+
 ### Handling errors
 When a device encounters an error, it will send a single message to the IoTHub. This message will be processed by Azure Analytics Stream.
 Additionally, another message will be sent directly to the Azure Service Bus for the purpose of sending emails.
@@ -289,3 +319,23 @@ Additionally, another message will be sent directly to the Azure Service Bus for
     }
 }
 ```
+
+### Sends email
+If a Device Error occurs (of any type), send an email to predefined address.\
+This is done thanks to _Communication_ _Service_. Look up ErrorEvent function:
+```C#
+if (data.increased == "true")
+{
+    await Handler.SendEmail(log, System.Environment.GetEnvironmentVariable("emailTo"), $"There was an error with{data.deviceNodeId}\n" +
+                                                                                        $"Device error code: {data.errors}");
+}
+```
+
+## Azure services used in the project:
+ + Function App
+ + Storage account
+ + Service Bus Queue
+ + Service Bus Namespace
+ + IoT Hub
+ + Stream Analytics job
+ + Communication Service

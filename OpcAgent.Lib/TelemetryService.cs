@@ -44,27 +44,37 @@ public class TelemetryService
 
     private TelemetryData GetCurrentTelemetryData()
     {
-        long totalGoodCount = _repository.GetGoodCount();
-        if (totalGoodCount < _lastTotalGoodCount) _lastTotalGoodCount = 0;
-        long goodCount = totalGoodCount - _lastTotalGoodCount;
-
-        long totalBadCount = _repository.GetBadCount();
-        if (totalBadCount < _lastTotalBadCount) _lastTotalBadCount = 0;
-        long badCount = totalBadCount - _lastTotalBadCount;
-
-        _lastTotalGoodCount = totalGoodCount;
-        _lastTotalBadCount = totalBadCount;
-        
-        return new TelemetryData
+        try
         {
-            ProductionStatus = _repository.GetProductionStatus(),
-            WorkorderId = _repository.GetWorkerId(),
-            GoodCount = goodCount,
-            BadCount = badCount,
-            TotalGoodCount = totalGoodCount,
-            TotalBadCount = totalBadCount,
-            Temperature = _repository.GetTemperature()
-        };
+            long totalGoodCount = _repository.GetGoodCount();
+            if (totalGoodCount < _lastTotalGoodCount) _lastTotalGoodCount = 0;
+            long goodCount = totalGoodCount - _lastTotalGoodCount;
+
+            long totalBadCount = _repository.GetBadCount();
+            if (totalBadCount < _lastTotalBadCount) _lastTotalBadCount = 0;
+            long badCount = totalBadCount - _lastTotalBadCount;
+
+            _lastTotalGoodCount = totalGoodCount;
+            _lastTotalBadCount = totalBadCount;
+
+            return new TelemetryData
+            {
+                ProductionStatus = _repository.GetProductionStatus(),
+                WorkorderId = _repository.GetWorkerId(),
+                GoodCount = goodCount,
+                BadCount = badCount,
+                TotalGoodCount = totalGoodCount,
+                TotalBadCount = totalBadCount,
+                Temperature = _repository.GetTemperature()
+            };
+        }
+        catch (OpcRepositoryException exception)
+        {
+            Console.WriteLine(exception);
+            Console.WriteLine("Check if device is running");
+        }
+
+        return new TelemetryData{};
     }
 
     private async void InitializeTelemetryTimer()
@@ -86,7 +96,6 @@ public class TelemetryService
             _telemetryTimer.Elapsed += OnTelemetryTimerElapsed;
             _telemetryTimer.AutoReset = true;
         }
-
     }
 
     private double ToMilliseconds(double seconds)

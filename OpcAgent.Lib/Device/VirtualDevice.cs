@@ -17,20 +17,35 @@ public class VirtualDevice : IDisposable
     private readonly NodeId _nodeId;
 
     private const double DefaultSendFrequency = 60 * 5.0; //5 minutes
-    private DeviceClient _deviceClient = null!;
+    private readonly DeviceClient _deviceClient;
 
     private TelemetryService _telemetryService = null!;
     public Action<string, int, bool> OnErrorsChange = null!;
-    private readonly OpcClient _client;
-    private OpcRepository _opcRepository = null!;
+    private readonly OpcClient _opcClient;
+    private OpcRepository _opcRepository;
     private int _lastErrorsValue = 0;
 
-    public VirtualDevice(string deviceConnectionString, NodeId nodeId, OpcClient opcClient)
+    public VirtualDevice(
+        NodeId nodeId,
+        OpcClient opcOpcClient,
+        DeviceClient deviceClient,
+        OpcRepository opcRepository
+    )
     {
         _nodeId = nodeId;
-        _client = opcClient;
-        SetDeviceClient(deviceConnectionString);
-        InitVirtualDevice();
+        _opcClient = opcOpcClient;
+        _deviceClient = deviceClient;
+        _deviceClient.OpenAsync();
+        _opcRepository = opcRepository;
+        SetDeviceClient();
+        try
+        {
+            InitVirtualDevice();
+        }
+        catch (OpcRepositoryException e)
+        {
+            Dispose();
+        }
     }
 
     ~VirtualDevice()
@@ -38,15 +53,8 @@ public class VirtualDevice : IDisposable
         Dispose(false);
     }
 
-    /// <summary>
-    /// Sets up the device client using the provided device connection string.
-    /// </summary>
-    /// <param name="deviceConnectionString">The connection string for the device.</param>
-    private async void SetDeviceClient(string deviceConnectionString)
+    private void SetDeviceClient()
     {
-        _deviceClient = DeviceClient.CreateFromConnectionString(deviceConnectionString, TransportType.Mqtt);
-        await _deviceClient.OpenAsync();
-        _opcRepository = new OpcRepository(_client, OpcUtils.InitReadNodes(_nodeId));
         _telemetryService = new TelemetryService(this, _opcRepository);
     }
 
@@ -98,6 +106,53 @@ public class VirtualDevice : IDisposable
         await Task.Delay(1000);
 
         return new MethodResponse(0);
+    }
+
+
+    /// <summary>
+    /// Handles the invocation of the "ResetErrorStatus" direct method.
+    /// </summary>
+    /// <param name="methodRequest">The method request.</param>
+    /// <param name="_">The user context.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation and containing the method response.</returns>
+    private Task<MethodResponse>? ResetErrorStatusHandler(MethodRequest methodRequest, object _)
+    {
+        try
+        {
+            _opcClient.CallMethod(
+                _nodeId,
+                $"{_nodeId}/{OpcEndpoint.ResetErrorStatus}");
+        }
+        catch (Exception exception)
+        {
+            Console.WriteLine($"{_nodeId}: exception occured during ResetErrorStatus: {exception}");
+            return Task.FromException(exception) as Task<MethodResponse>;
+        }
+
+        return Task.FromResult(new MethodResponse(0));
+    }
+
+    /// <summary>
+    /// Handles the invocation of the "EmergencyStop" direct method.
+    /// </summary>
+    /// <param name="methodRequest">The method request.</param>
+    /// <param name="_">The user context.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation and containing the method response.</returns>
+    private Task<MethodResponse>? EmergencyStopHandler(MethodRequest methodRequest, object _)
+    {
+        try
+        {
+            _opcClient.CallMethod(
+                _nodeId,
+                $"{_nodeId}/{OpcEndpoint.EmergencyStop}");
+        }
+        catch (Exception exception)
+        {
+            Console.WriteLine($"{_nodeId}: exception occured during emergency stop: {exception}");
+            return Task.FromException(exception) as Task<MethodResponse>;
+        }
+
+        return Task.FromResult(new MethodResponse(0));
     }
 
     #endregion Direct Methods
@@ -170,15 +225,7 @@ public class VirtualDevice : IDisposable
     private async void InitVirtualDevice()
     {
         await InitializeHandlers();
-        try
-        {
-            await UpdateReportedDeviceTwinPropertyAsync("DeviceErrors", _opcRepository.GetErrors());
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e.ToString());
-        }
-
+        await UpdateReportedDeviceTwinPropertyAsync("DeviceErrors", _opcRepository.GetErrors());
         var twin = await _deviceClient.GetTwinAsync();
         if (twin.Properties.Desired.Contains("ProductionRate"))
         {
@@ -187,16 +234,16 @@ public class VirtualDevice : IDisposable
         }
 
         await UpdateReportedDeviceTwinPropertyAsync("ProductionRate", _opcRepository.GetProductionRate());
-        _client.SubscribeDataChange($"{_nodeId}/{OpcEndpoint.DeviceError}", HandleErrorsChanged);
+        _opcClient.SubscribeDataChange($"{_nodeId}/{OpcEndpoint.DeviceError}", HandleErrorsChanged);
     }
-    
+
     /// <summary>
     /// Sets the production rate for the device and updated DeviceTwin reported 'ProductionRate' property. 
     /// </summary>
     /// <param name="productionRate">The new production rate value.</param>
     private void SetProductionRate(int productionRate)
     {
-        OpcStatus result = _client.WriteNode($"{_nodeId}/{OpcEndpoint.ProductionRate}", productionRate);
+        OpcStatus result = _opcClient.WriteNode($"{_nodeId}/{OpcEndpoint.ProductionRate}", productionRate);
         Console.WriteLine(result.IsGood
             ? $"{_nodeId}Production rate successfully changed to: {productionRate}"
             : $"{_nodeId}Could not change production rate.");
@@ -255,52 +302,7 @@ public class VirtualDevice : IDisposable
 
         return DefaultSendFrequency;
     }
-    
-    /// <summary>
-    /// Handles the invocation of the "ResetErrorStatus" direct method.
-    /// </summary>
-    /// <param name="methodRequest">The method request.</param>
-    /// <param name="_">The user context.</param>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation and containing the method response.</returns>
-    private Task<MethodResponse>? ResetErrorStatusHandler(MethodRequest methodRequest, object _)
-    {
-        try
-        {
-            _client.CallMethod(
-                _nodeId,
-                $"{_nodeId}/{OpcEndpoint.ResetErrorStatus}");
-        }
-        catch (Exception exception)
-        {
-            Console.WriteLine($"{_nodeId}: exception occured during ResetErrorStatus: {exception}");
-            return Task.FromException(exception) as Task<MethodResponse>;
-        }
 
-        return Task.FromResult(new MethodResponse(0));
-    }
-
-    /// <summary>
-    /// Handles the invocation of the "EmergencyStop" direct method.
-    /// </summary>
-    /// <param name="methodRequest">The method request.</param>
-    /// <param name="_">The user context.</param>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation and containing the method response.</returns>
-    private Task<MethodResponse>? EmergencyStopHandler(MethodRequest methodRequest, object _)
-    {
-        try
-        {
-            _client.CallMethod(
-                _nodeId,
-                $"{_nodeId}/{OpcEndpoint.EmergencyStop}");
-        }
-        catch (Exception exception)
-        {
-            Console.WriteLine($"{_nodeId}: exception occured during emergency stop: {exception}");
-            return Task.FromException(exception) as Task<MethodResponse>;
-        }
-
-        return Task.FromResult(new MethodResponse(0));
-    }
 
     private void ReleaseUnmanagedResources()
     {
@@ -313,7 +315,7 @@ public class VirtualDevice : IDisposable
         if (disposing)
         {
             _deviceClient.Dispose();
-            _client.Dispose();
+            _opcClient.Dispose();
         }
     }
 

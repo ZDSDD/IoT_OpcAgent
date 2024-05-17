@@ -7,7 +7,7 @@ namespace OpcAgent.Lib;
 
 public static class OpcUtils
 {
-    internal static Dictionary<OpcEndpoint, OpcReadNode> InitReadNodes(NodeId nodeId)
+    public static Dictionary<OpcEndpoint, OpcReadNode> InitReadNodes(NodeId nodeId)
     {
         return new Dictionary<OpcEndpoint, OpcReadNode>
         {

@@ -128,13 +128,13 @@ namespace FunctionAppsDemo.Functions
 
             if (!shouldDecreaseProductionRate)
             {
-                log.LogInformation($"{data.DeviceId} ratio was: {ratio}.\tNo need to decrease desired production rate");
+                log.LogInformation($"{data.DeviceId} ratio was: {ratio}. No need to decrease desired production rate");
                 return;
             }
             else
             {
                 log.LogInformation(
-                    $"{data.DeviceId} ratio was: {ratio}.\tProceeding to decrease desired production rate");
+                    $"{data.DeviceId} ratio was: {ratio}. Proceeding to decrease desired production rate");
             }
 
             //Finaly, update the desired twin. Don't go below 0!

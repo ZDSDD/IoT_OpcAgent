@@ -21,13 +21,103 @@ public class OpcRepository : IOpcRepository
 {
     private readonly OpcClient _client;
     private readonly Dictionary<OpcEndpoint, OpcReadNode> _readValuesCommands;
+    public int TotalMethods { get; private set; }
 
     public OpcRepository(OpcClient client, Dictionary<OpcEndpoint, OpcReadNode> readValuesCommands)
     {
         _client = client;
         _readValuesCommands = readValuesCommands;
+        TotalMethods = 7;
     }
 
+    public bool IsOk()
+    {
+        try
+        {
+            GetProductionStatus();
+            GetErrors();
+            GetTemperature();
+            GetBadCount();
+            GetGoodCount();
+            GetProductionRate();
+            GetWorkerId();
+        }
+        catch (OpcRepositoryException ex)
+        {
+            Console.WriteLine(ex.Message);
+            return false;
+        }
+
+        return true;
+    }
+    public int MethodsPassedCount()
+    {
+        int passedCount = 0;
+
+        try
+        {
+            GetProductionStatus();
+            passedCount++;
+        }
+        catch (OpcRepositoryException)
+        {
+        }
+
+        try
+        {
+            GetErrors();
+            passedCount++;
+        }
+        catch (OpcRepositoryException)
+        {
+        }
+
+        try
+        {
+            GetTemperature();
+            passedCount++;
+        }
+        catch (OpcRepositoryException)
+        {
+        }
+
+        try
+        {
+            GetBadCount();
+            passedCount++;
+        }
+        catch (OpcRepositoryException)
+        {
+        }
+        try
+        {
+            GetGoodCount();
+            passedCount++;
+        }
+        catch (OpcRepositoryException)
+        {
+        }
+
+        try
+        {
+            GetProductionRate();
+            passedCount++;
+        }
+        catch (OpcRepositoryException)
+        {
+        }
+
+        try
+        {
+            GetWorkerId();
+            passedCount++;
+        }
+        catch (OpcRepositoryException)
+        {
+        }
+
+        return passedCount;
+    }
     public T GetValue<T>(OpcEndpoint endpoint)
     {
         var result = _client.ReadNode(_readValuesCommands[endpoint]);

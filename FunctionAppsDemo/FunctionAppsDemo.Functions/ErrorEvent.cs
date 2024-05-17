@@ -46,16 +46,8 @@ public class ErrorEvent
 
         if (data.increased == "true")
         {
-            List<string> recipientEmails = new List<string>
-            {
-                // "Recipient1@example.com",
-                // "Recipient2@example.com",
-            };
-            foreach (String email in recipientEmails)
-            {
-                await Handler.SendEmail(log, email, $"There was an error with{data.deviceNodeId}\n" +
+                await Handler.SendEmail(log, System.Environment.GetEnvironmentVariable("emailTo"), $"There was an error with{data.deviceNodeId}\n" +
                                                     $"Device error code: {data.errors}");
-            }
         }
         else
         {

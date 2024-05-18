@@ -7,6 +7,7 @@ using Opc.UaFx.Client;
 using OpcAgent.Lib;
 using OpcAgent.Lib.Device;
 using OpcAgent.Lib.Managers;
+using OpcAgent.Lib.Selector;
 using TransportType = Microsoft.Azure.Devices.Client.TransportType;
 
 //Get keys from secrets.json
@@ -64,9 +65,17 @@ foreach (IConfigurationSection device in devicesSection.GetChildren())
         {
             Console.WriteLine("Check if device is running or if device node id is properly set.");
         }
+        deviceClient.Dispose();
     }
 
     await Task.Delay(100);
 }
 
-Console.ReadLine();
+
+int input;
+do
+{
+    FeatureSelector.PrintMenu();
+    input = FeatureSelector.ReadInput();
+    await FeatureSelector.Execute(input, productionLineManager, opcClient);
+} while (input != 0);

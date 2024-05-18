@@ -38,16 +38,16 @@ public class ErrorEvent
             $"C# ServiceBus queue trigger. Invocation ID: {context.InvocationId} Function processed message: {myQueueItem}");
 
         var data = JsonConvert.DeserializeObject<ErrorMessage>(myQueueItem);
-        if (data == null || ReferenceEquals(null, data.errors))
+        if (data == null || ReferenceEquals(null, data.Errors))
         {
             await messageActions.DeadLetterMessageAsync(message);
             return;
         }
 
-        if (data.increased == "true")
+        if (data.ErrorsIncreased == "true")
         {
-                await Handler.SendEmail(log, System.Environment.GetEnvironmentVariable("emailTo"), $"There was an error with{data.deviceNodeId}\n" +
-                                                    $"Device error code: {data.errors}");
+                await Handler.SendEmail(log, System.Environment.GetEnvironmentVariable("emailTo"), $"There was an error with: {data.DeviceNode}\n" +
+                                                    $"Device error code: {data.Errors}");
         }
         else
         {

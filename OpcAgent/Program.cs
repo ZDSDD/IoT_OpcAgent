@@ -33,16 +33,10 @@ catch (OpcException exception)
     Console.WriteLine(@"Closing agent. Check if server runs properly and try again.");
     return;
 }
-
-string sbConnectionString = config.GetConnectionString("ServiceBus");
-const string queueName = "myqueue";
-
-await using ServiceBusClient serviceBusClient = new ServiceBusClient(sbConnectionString);
-await using ServiceBusSender sender = serviceBusClient.CreateSender(queueName);
 // Get all devices defined in secrets.json
 IConfigurationSection devicesSection = config.GetSection("Devices");
 
-ProductionLineManager productionLineManager = new ProductionLineManager(sender);
+ProductionLineManager productionLineManager = new ProductionLineManager();
 foreach (IConfigurationSection device in devicesSection.GetChildren())
 {
     // Get device details

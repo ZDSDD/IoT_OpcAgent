@@ -5,8 +5,8 @@ namespace FunctionAppsDemo.Models
 {
     internal class ErrorMessage
     {
-        public string errors { get; set; }
-        public string deviceNodeId { get; set; }
-        public string increased {  get; set; }
+        public string Errors { get; set; }
+        public string DeviceNode { get; set; }
+        public string ErrorsIncreased {  get; set; }
     }
 }

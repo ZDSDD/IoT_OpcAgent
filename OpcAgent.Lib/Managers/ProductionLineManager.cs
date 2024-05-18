@@ -4,20 +4,25 @@ using OpcAgent.Lib.Device;
 
 namespace OpcAgent.Lib.Managers;
 
-public class ProductionLineManager(ServiceBusSender serviceBusSender)
+public class ProductionLineManager()
 {
-    private List<VirtualDevice> _devices = [];
+    private readonly List<VirtualDevice> _devices = [];
 
     public void AddDevice(VirtualDevice virtualDevice)
     {
         _devices.Add(virtualDevice);
-        virtualDevice.OnErrorsChange += OnErrorsChange;
     }
 
-    private void OnErrorsChange(string deviceid, int deviceErrors, bool increase)
+    public void PrintDevices()
     {
-        var json = JsonConvert.SerializeObject(new { deviceId = deviceid, errors = deviceErrors, increased = increase ? "true" : "false"});
-        var message = new ServiceBusMessage(json);
-        serviceBusSender.SendMessageAsync(message);
+        for (int i = 0; i < _devices.Count; i++)
+        {
+            Console.WriteLine($"{i} > {_devices[i].NodeId}");
+        }
+    }
+
+    public bool AlreadyExists(string deviceNodeId)
+    {
+        return _devices.Exists(x => x.NodeId.ToString() == deviceNodeId);
     }
 }

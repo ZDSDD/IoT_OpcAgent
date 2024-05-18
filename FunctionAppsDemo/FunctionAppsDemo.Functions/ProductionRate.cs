@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.ServiceBus;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Configuration;
 using FunctionAppsDemo.Functions.Model;
 using Newtonsoft.Json;
 using System.Text;

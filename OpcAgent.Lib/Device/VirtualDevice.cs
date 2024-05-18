@@ -15,7 +15,7 @@ namespace OpcAgent.Lib.Device;
 /// </summary>
 public class VirtualDevice : IDisposable
 {
-    private readonly NodeId _nodeId;
+    public NodeId NodeId { private set; get; }
 
     private const double DefaultSendFrequency = 60 * 5.0; //5 minutes
     private readonly DeviceClient _deviceClient;
@@ -33,7 +33,7 @@ public class VirtualDevice : IDisposable
         OpcRepository opcRepository
     )
     {
-        _nodeId = nodeId;
+        NodeId = nodeId;
         _opcClient = opcOpcClient;
         _deviceClient = deviceClient;
         _deviceClient.OpenAsync();
@@ -68,7 +68,6 @@ public class VirtualDevice : IDisposable
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     public async Task SendMessage(Message message)
     {
-        Console.WriteLine($"\t{DateTime.Now.ToLocalTime()}> Sending message. {_nodeId}");
         await _deviceClient.SendEventAsync(message);
         message.Dispose();
     }
@@ -87,7 +86,7 @@ public class VirtualDevice : IDisposable
     private void PrintMessage(Message receivedMessage)
     {
         string messageData = Encoding.ASCII.GetString(receivedMessage.GetBytes());
-        Console.WriteLine($"\t{_nodeId}\tReceived message: {messageData}");
+        Console.WriteLine($"\t{NodeId}\tReceived message: {messageData}");
 
         int propCount = 0;
         foreach (var prop in receivedMessage.Properties)
@@ -121,16 +120,14 @@ public class VirtualDevice : IDisposable
         try
         {
             _opcClient.CallMethod(
-                _nodeId,
-                $"{_nodeId}/{OpcEndpoint.ResetErrorStatus}");
+                NodeId,
+                $"{NodeId}/{OpcEndpoint.ResetErrorStatus}");
         }
         catch (Exception exception)
         {
-            Console.WriteLine($"{_nodeId}: exception occured during Reset Error Status : {exception.Message}");
-        
             var errorResponse = MethodResponseHelper.CreateResponse(500, new
             {
-                message = $"{_nodeId}: exception occured during Reset Error Status.",
+                message = $"{NodeId}: exception occured during Reset Error Status.",
                 exception_message = exception.Message
             }, 500);
         
@@ -156,16 +153,14 @@ public class VirtualDevice : IDisposable
         try
         {
             _opcClient.CallMethod(
-                _nodeId,
-                $"{_nodeId}/{OpcEndpoint.EmergencyStop}");
+                NodeId,
+                $"{NodeId}/{OpcEndpoint.EmergencyStop}");
         }
         catch (Exception exception)
         {
-            Console.WriteLine($"{_nodeId}: exception occured during emergency stop: {exception.Message}");
-        
             var errorResponse = MethodResponseHelper.CreateResponse(500, new
             {
-                message = $"{_nodeId}: exception occured during emergency stop.",
+                message = $"{NodeId}: exception occured during emergency stop.",
                 exception_message = exception.Message
             }, 500);
         
@@ -261,7 +256,7 @@ public class VirtualDevice : IDisposable
 
         await UpdateReportedDeviceTwinPropertyAsync("ProductionRate", _opcRepository.GetProductionRate());
         this._lastErrorsValue = _opcRepository.GetErrors();
-        _opcClient.SubscribeDataChange($"{_nodeId}/{OpcEndpoint.DeviceError}", HandleErrorsChanged);
+        _opcClient.SubscribeDataChange($"{NodeId}/{OpcEndpoint.DeviceError}", HandleErrorsChanged);
     }
 
     /// <summary>
@@ -270,10 +265,11 @@ public class VirtualDevice : IDisposable
     /// <param name="productionRate">The new production rate value.</param>
     private void SetProductionRate(int productionRate)
     {
-        OpcStatus result = _opcClient.WriteNode($"{_nodeId}/{OpcEndpoint.ProductionRate}", productionRate);
-        Console.WriteLine(result.IsGood
-            ? $"{_nodeId}Production rate successfully changed to: {productionRate}"
-            : $"{_nodeId}Could not change production rate.");
+        OpcStatus result = _opcClient.WriteNode($"{NodeId}/{OpcEndpoint.ProductionRate}", productionRate);
+        //todo: log it instead of writing into the console
+        // Console.WriteLine(result.IsGood
+        //     ? $"{_nodeId}Production rate successfully changed to: {productionRate}"
+        //     : $"{_nodeId}Could not change production rate.");
         _ = UpdateReportedDeviceTwinPropertyAsync("ProductionRate", _opcRepository.GetProductionRate());
     }
 
@@ -292,14 +288,11 @@ public class VirtualDevice : IDisposable
         Message errorEventMessage = MessageService.PrepareMessage(new
         {
             Errors = errorsValue,
-            DeviceNode = _nodeId.Identifier,
+            DeviceNode = NodeId.Identifier,
             Event = "error",
-            ErrorsIncreased = errorsIncreased ? 1 : 0
+            ErrorsIncreased = errorsIncreased ? "true" : "false"
         });
         await SendMessage(errorEventMessage);
-
-        OnErrorsChange.Invoke(this._nodeId.ToString(), errorsValue, errorsIncreased);
-
         await UpdateReportedDeviceTwinPropertyAsync("DeviceErrors", (int)errors);
     }
 

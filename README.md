@@ -59,8 +59,7 @@ To configure the IoT Agent locally, you must provide the `secrets.json` file for
 {
   "ConnectionStrings": {
     "serverAddress": "<server_adress>", //i.e. "opc.tcp://localhost:4840/", 
-    "IoTHub": "<IoTHub_connection_string>",
-    "ServiceBus": "<serviceBus connection string>"
+    "IoTHub": "<IoTHub_connection_string>"
   },
   "Devices": [
     {
@@ -79,7 +78,7 @@ To configure the IoT Agent locally, you must provide the `secrets.json` file for
       "DeviceNodeId": "<device_node_id>",
       "DeviceConnectionString": "<iot_hub_device_connection_string5>"
     }
-  //... and more devices as you need.
+  //... and more pre-defined devices as you need.
   ]
 }
 ```
@@ -143,10 +142,20 @@ FROM
 GROUP BY
     IoTHub.ConnectionDeviceId,
     TumblingWindow(minute, 5)
+
+-- query 4
+SELECT
+    *
+INTO
+    [OUTPUT]
+FROM 
+    [INPUT]
+WHERE
+    Event = 'error'
 ```
 
 ### Containers
-To store data calculations, there is need to create containers on storage acount. That where data calculation will be stored.
+To store data calculations, there is need to create containers on storage acount. Tha'st where data calculations will be stored.
 
 ### Temperatures data calculations
 > Every 1 minute give me the average, minimum and maximum temperature over the last 5 minutes (grouped by device).\
@@ -249,7 +258,7 @@ ContentEncoding: `UTF8`
 
 ### Handling errors
 When a device encounters an error, it will send a single message to the IoTHub. This message will be processed by Azure Analytics Stream.
-Additionally, another message will be sent directly to the Azure Service Bus for the purpose of sending emails.
+
 ### Sample error event message 
 ```
 {
@@ -322,14 +331,10 @@ Additionally, another message will be sent directly to the Azure Service Bus for
 
 ### Sends email
 If a Device Error occurs (of any type), send an email to predefined address.\
-This is done thanks to _Communication_ _Service_. Look up ErrorEvent function:
-```C#
-if (data.increased == "true")
-{
-    await Handler.SendEmail(log, System.Environment.GetEnvironmentVariable("emailTo"), $"There was an error with{data.deviceNodeId}\n" +
-                                                                                        $"Device error code: {data.errors}");
-}
-```
+This is done thanks to _Communication_ _Service_.
+
+#### Sample email body 
+ > There was an error with Device 1 Device error code: 5
 
 ## Azure services used in the project:
  + Function App
@@ -339,3 +344,8 @@ if (data.increased == "true")
  + IoT Hub
  + Stream Analytics job
  + Communication Service
+
+## Diagram
+
+![iot drawio](https://github.com/ZDSDD/IoT_OpcAgent/assets/106777224/c5e3d65b-6e44-41b5-900c-28f437f0fc15)
+

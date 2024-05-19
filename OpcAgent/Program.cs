@@ -20,7 +20,21 @@ string serverAddress = config.GetConnectionString("serverAddress");
 using var opcClient = new OpcClient(serverAddress);
 try
 {
+    opcClient.ReconnectTimeout = 3000;
+    opcClient.OperationTimeout = 2000;
+    opcClient.Connected += (sender, eventArgs) => { Console.WriteLine(@"connecteed! :)"); };
+    opcClient.StateChanged += (sender, eventArgs) =>
+    {
+        Console.WriteLine($@"State changed: {eventArgs.OldState} to {eventArgs.NewState}");
+    };
     opcClient.Connect();
+
+    opcClient.Reconnected += (sender, eventArgs) => { Console.WriteLine(@"opc client reconnected successfully"); };
+
+    opcClient.Reconnecting += (sender, eventArgs) =>
+    {
+        Console.WriteLine(@"Lost connection... trying to reconnect..." + eventArgs);
+    };
 }
 catch (InvalidOperationException exception)
 {
@@ -34,48 +48,26 @@ catch (OpcException exception)
     Console.WriteLine(@"Closing agent. Check if server runs properly and try again.");
     return;
 }
+
 // Get all devices defined in secrets.json
 IConfigurationSection devicesSection = config.GetSection("Devices");
 
 ProductionLineManager productionLineManager = new ProductionLineManager();
+
 foreach (IConfigurationSection device in devicesSection.GetChildren())
 {
     // Get device details
     string deviceConnectionString = device["DeviceConnectionString"];
     string deviceNodeId = device["DeviceNodeId"];
-    Console.WriteLine(deviceConnectionString);
-
     //Initialize Device Client
-
-    var deviceClient = DeviceClient.CreateFromConnectionString(deviceConnectionString, TransportType.Mqtt);
-    var nodeId = new NodeId(deviceNodeId);
-    var opcRepository = new OpcRepository(opcClient, OpcUtils.InitReadNodes(nodeId));
-    //Initialize Virtual Device
-    if (opcRepository.IsOk())
-    {
-        productionLineManager.AddDevice(new VirtualDevice(nodeId, opcClient, deviceClient, opcRepository));
-    }
-    else
-    {
-        Console.WriteLine("\nThere is currently error with " + nodeId);
-        Console.WriteLine("Checking method pass...");
-        int passed = opcRepository.MethodsPassedCount();
-        Console.WriteLine($"\nMethod passed: {passed}. Total methods = {opcRepository.TotalMethods}");
-        if (passed == 0)
-        {
-            Console.WriteLine("Check if device is running or if device node id is properly set.");
-        }
-        deviceClient.Dispose();
-    }
-
-    await Task.Delay(100);
+    await FeatureSelector.AddDevice(deviceNodeId, opcClient, deviceConnectionString, productionLineManager);
 }
 
 
 int input;
 do
 {
-    FeatureSelector.PrintMenu();
+    FeatureSelector.PrintMenu(productionLineManager);
     input = FeatureSelector.ReadInput();
     await FeatureSelector.Execute(input, productionLineManager, opcClient);
 } while (input != 0);

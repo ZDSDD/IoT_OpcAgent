@@ -2,6 +2,7 @@
 using System.Text.Json;
 using Microsoft.Azure.Devices.Client;
 using Microsoft.Azure.Devices.Shared;
+using Microsoft.Extensions.Azure;
 using Newtonsoft.Json.Linq;
 using Opc.Ua;
 using Opc.UaFx;
@@ -38,7 +39,7 @@ public class VirtualDevice : IDisposable
         _deviceClient = deviceClient;
         _deviceClient.OpenAsync();
         _opcRepository = opcRepository;
-        SetDeviceClient();
+        SetUpTelemetryService();
         try
         {
             InitVirtualDevice();
@@ -54,9 +55,21 @@ public class VirtualDevice : IDisposable
         Dispose(false);
     }
 
-    private void SetDeviceClient()
+    private void SetUpTelemetryService()
     {
         _telemetryService = new TelemetryService(this, _opcRepository);
+        // if there is lost in connection, stop telemetry for a while.
+        _opcClient.StateChanged += (sender, args) =>
+        {
+            if (args.OldState == OpcClientState.Connected && args.NewState == OpcClientState.Connecting)
+            {
+                _telemetryService.StopTelemetry();
+            }
+        };
+        _opcClient.Connected += (sender, args) =>
+        {
+            _telemetryService.StartTelemetry();
+        };
     }
 
     #region Sending Messages
@@ -68,6 +81,7 @@ public class VirtualDevice : IDisposable
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     public async Task SendMessage(Message message)
     {
+        // Console.WriteLine($@"{NodeId}: sending message: {message}");
         await _deviceClient.SendEventAsync(message);
         message.Dispose();
     }
@@ -86,12 +100,12 @@ public class VirtualDevice : IDisposable
     private void PrintMessage(Message receivedMessage)
     {
         string messageData = Encoding.ASCII.GetString(receivedMessage.GetBytes());
-        Console.WriteLine($"\t{NodeId}\tReceived message: {messageData}");
+        Console.WriteLine($@"	{NodeId}	Received message: {messageData}");
 
         int propCount = 0;
         foreach (var prop in receivedMessage.Properties)
         {
-            Console.WriteLine($"\t\tProperty[{propCount++}> Key={prop.Key} : Value={prop.Value}");
+            Console.WriteLine($@"		Property[{propCount++}> Key={prop.Key} : Value={prop.Value}");
         }
     }
 
@@ -101,7 +115,7 @@ public class VirtualDevice : IDisposable
 
     private static async Task<MethodResponse> DefaultServiceHandler(MethodRequest methodRequest, object userContext)
     {
-        Console.WriteLine($"\tMETHOD EXECUTED: {methodRequest.Name}. It does nothing : ) ");
+        Console.WriteLine($@"	METHOD EXECUTED: {methodRequest.Name}. It does nothing : ) ");
 
         await Task.Delay(1000);
 
@@ -130,7 +144,7 @@ public class VirtualDevice : IDisposable
                 message = $"{NodeId}: exception occured during Reset Error Status.",
                 exception_message = exception.Message
             }, 500);
-        
+
             return Task.FromResult(errorResponse);
         }
 
@@ -138,7 +152,7 @@ public class VirtualDevice : IDisposable
         {
             message = "Reset Error Status handled successfully."
         }, 200);
-    
+
         return Task.FromResult(successResponse);
     }
 
@@ -163,7 +177,7 @@ public class VirtualDevice : IDisposable
                 message = $"{NodeId}: exception occured during emergency stop.",
                 exception_message = exception.Message
             }, 500);
-        
+
             return Task.FromResult(errorResponse);
         }
 
@@ -171,10 +185,9 @@ public class VirtualDevice : IDisposable
         {
             message = "Emergency stop handled successfully."
         }, 200);
-    
+
         return Task.FromResult(successResponse);
     }
-
 
     #endregion Direct Methods
 
@@ -334,8 +347,8 @@ public class VirtualDevice : IDisposable
         ReleaseUnmanagedResources();
         if (disposing)
         {
+            _telemetryService.Dispose();
             _deviceClient.Dispose();
-            _opcClient.Dispose();
         }
     }
 

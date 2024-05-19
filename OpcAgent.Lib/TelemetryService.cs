@@ -3,12 +3,13 @@ using System.Text;
 using System.Timers;
 using Microsoft.Azure.Devices.Client;
 using Newtonsoft.Json;
+using Opc.UaFx;
 using OpcAgent.Lib.Device;
 using Timer = System.Timers.Timer;
 
 namespace OpcAgent.Lib;
 
-public class TelemetryService
+public class TelemetryService : IDisposable
 {
     private readonly VirtualDevice _virtualDevice;
 
@@ -16,14 +17,26 @@ public class TelemetryService
 
     private readonly OpcRepository _repository;
 
-    private double defaultTelemetryInterval;
+    private double _defaultTelemetryInterval;
 
     public TelemetryService(VirtualDevice virtualDevice, OpcRepository repository)
     {
         _virtualDevice = virtualDevice;
         InitializeTelemetryTimer();
         _repository = repository;
-        defaultTelemetryInterval = 10;
+        _defaultTelemetryInterval = 10;
+    }
+
+    public void StopTelemetry()
+    {
+        this._telemetryTimer.Stop();
+        Console.WriteLine("Telemetry timer stopped successfully");
+    }
+
+    public void StartTelemetry()
+    {
+        this._telemetryTimer.Start();
+        Console.WriteLine("Telemetry timer started successfully");
     }
 
     private async void SendTelemetryToCloud(TelemetryData data)
@@ -36,7 +49,14 @@ public class TelemetryService
     private void OnTelemetryTimerElapsed(object? sender, ElapsedEventArgs e)
     {
         // Handle telemetry data transmission
-        SendTelemetryToCloud(GetCurrentTelemetryData());
+        try
+        {
+            SendTelemetryToCloud(GetCurrentTelemetryData());
+        }
+        catch (OpcException)
+        {
+            Console.WriteLine(@"Coudln't send telemetry to the cloud");
+        }
     }
 
     private long _lastTotalGoodCount = 0;
@@ -71,7 +91,14 @@ public class TelemetryService
         catch (OpcRepositoryException exception)
         {
             Console.WriteLine(exception);
-            Console.WriteLine("Check if device is running");
+            Console.WriteLine(@"Check if device is running");
+        }
+        catch (OpcException exception)
+        {
+            Console.WriteLine("Exception occured during telemetry service: " + exception.Message);
+            Console.WriteLine("Stoping the timer");
+            this._telemetryTimer.Stop();
+            throw;
         }
 
         return new TelemetryData{};
@@ -88,7 +115,7 @@ public class TelemetryService
         catch (Exception ex)
         {
             Console.WriteLine(ex.Message);
-            _telemetryTimer = new Timer(ToMilliseconds(defaultTelemetryInterval));
+            _telemetryTimer = new Timer(ToMilliseconds(_defaultTelemetryInterval));
             _telemetryTimer.Start();
         }
         finally
@@ -109,11 +136,16 @@ public class TelemetryService
         if (newTelemetryTimeInSeconds > 2)
         {
             _telemetryTimer.Interval = ToMilliseconds(newTelemetryTimeInSeconds);
-            Console.WriteLine($"Telemetry timer updated to: {newTelemetryTimeInSeconds} seconds");
+            Console.WriteLine($@"Telemetry timer updated to: {newTelemetryTimeInSeconds} seconds");
         }
         else
         {
-            Console.WriteLine($"Failed to set telemetry timer to: {newTelemetryTimeInSeconds} seconds");
+            Console.WriteLine($@"Failed to set telemetry timer to: {newTelemetryTimeInSeconds} seconds");
         }
+    }
+
+    public void Dispose()
+    {
+        _telemetryTimer.Dispose();
     }
 }

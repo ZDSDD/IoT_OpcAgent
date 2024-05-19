@@ -1,0 +1,1584 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "apis_FunctionAppsDemoFunctions_path": {
+            "type": "SecureString"
+        },
+        "IotHubs_iot_seba_connectionString": {
+            "type": "SecureString"
+        },
+        "IotHubs_iot_seba_containerName": {
+            "type": "SecureString"
+        },
+        "IotHubs_iot_seba_name": {
+            "defaultValue": "iot-seba",
+            "type": "String"
+        },
+        "sites_zaliczeniowe1ss_name": {
+            "defaultValue": "zaliczeniowe1ss",
+            "type": "String"
+        },
+        "namespaces_ul2024ss_name": {
+            "defaultValue": "ul2024ss",
+            "type": "String"
+        },
+        "components_zaliczeniowe1ss_name": {
+            "defaultValue": "zaliczeniowe1ss",
+            "type": "String"
+        },
+        "storageAccounts_storageseby_name": {
+            "defaultValue": "storageseby",
+            "type": "String"
+        },
+        "emailServices_email_seba_name": {
+            "defaultValue": "email-seba",
+            "type": "String"
+        },
+        "serverfarms_ASP_zaliczenieiotul_b287_name": {
+            "defaultValue": "ASP-zaliczenieiotul-b287",
+            "type": "String"
+        },
+        "streamingjobs_zaliczeniowyss_name": {
+            "defaultValue": "zaliczeniowyss",
+            "type": "String"
+        },
+        "CommunicationServices_zaliczenieiot_name": {
+            "defaultValue": "zaliczenieiot",
+            "type": "String"
+        },
+        "service_FunctionAppsDemoFunctionsapi_name": {
+            "defaultValue": "FunctionAppsDemoFunctionsapi",
+            "type": "String"
+        },
+        "actionGroups_Application_Insights_Smart_Detection_name": {
+            "defaultValue": "Application Insights Smart Detection",
+            "type": "String"
+        },
+        "workspaces_DefaultWorkspace_027b0a11_67a4_40b4_a1ee_8056ad85aeb2_PLC_externalid": {
+            "defaultValue": "/subscriptions/027b0a11-67a4-40b4-a1ee-8056ad85aeb2/resourceGroups/DefaultResourceGroup-PLC/providers/Microsoft.OperationalInsights/workspaces/DefaultWorkspace-027b0a11-67a4-40b4-a1ee-8056ad85aeb2-PLC",
+            "type": "String"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.ApiManagement/service",
+            "apiVersion": "2023-05-01-preview",
+            "name": "[parameters('service_FunctionAppsDemoFunctionsapi_name')]",
+            "location": "Poland Central",
+            "sku": {
+                "name": "Consumption",
+                "capacity": 0
+            },
+            "properties": {
+                "publisherEmail": "UL0265545@edu.uni.lodz.pl",
+                "publisherName": "Kamila Kwietniewska",
+                "notificationSenderEmail": "apimgmt-noreply@mail.windowsazure.com",
+                "hostnameConfigurations": [
+                    {
+                        "type": "Proxy",
+                        "hostName": "functionappsdemofunctionsapi.azure-api.net",
+                        "negotiateClientCertificate": false,
+                        "defaultSslBinding": true,
+                        "certificateSource": "BuiltIn"
+                    }
+                ],
+                "customProperties": {
+                    "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Protocols.Tls10": "False",
+                    "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Protocols.Tls11": "False",
+                    "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Backend.Protocols.Tls10": "False",
+                    "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Backend.Protocols.Tls11": "False",
+                    "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Backend.Protocols.Ssl30": "False",
+                    "Microsoft.WindowsAzure.ApiManagement.Gateway.Protocols.Server.Http2": "False"
+                },
+                "virtualNetworkType": "None",
+                "disableGateway": false,
+                "natGatewayState": "Disabled",
+                "apiVersionConstraint": {},
+                "publicNetworkAccess": "Enabled",
+                "legacyPortalStatus": "Enabled",
+                "developerPortalStatus": "Enabled"
+            }
+        },
+        {
+            "type": "Microsoft.Communication/emailServices",
+            "apiVersion": "2023-06-01-preview",
+            "name": "[parameters('emailServices_email_seba_name')]",
+            "location": "global",
+            "properties": {
+                "dataLocation": "Europe"
+            }
+        },
+        {
+            "type": "Microsoft.Devices/IotHubs",
+            "apiVersion": "2023-06-30",
+            "name": "[parameters('IotHubs_iot_seba_name')]",
+            "location": "northeurope",
+            "sku": {
+                "name": "F1",
+                "tier": "Free",
+                "capacity": 1
+            },
+            "identity": {
+                "type": "None"
+            },
+            "properties": {
+                "ipFilterRules": [],
+                "eventHubEndpoints": {
+                    "events": {
+                        "retentionTimeInDays": 1,
+                        "partitionCount": 2
+                    }
+                },
+                "routing": {
+                    "endpoints": {
+                        "serviceBusQueues": [],
+                        "serviceBusTopics": [],
+                        "eventHubs": [],
+                        "storageContainers": [],
+                        "cosmosDBSqlContainers": []
+                    },
+                    "routes": [],
+                    "fallbackRoute": {
+                        "name": "$fallback",
+                        "source": "DeviceMessages",
+                        "condition": "true",
+                        "endpointNames": [
+                            "events"
+                        ],
+                        "isEnabled": true
+                    }
+                },
+                "storageEndpoints": {
+                    "$default": {
+                        "sasTtlAsIso8601": "PT1H",
+                        "connectionString": "[parameters('IotHubs_iot_seba_connectionString')]",
+                        "containerName": "[parameters('IotHubs_iot_seba_containerName')]"
+                    }
+                },
+                "messagingEndpoints": {
+                    "fileNotifications": {
+                        "lockDurationAsIso8601": "PT1M",
+                        "ttlAsIso8601": "PT1H",
+                        "maxDeliveryCount": 10
+                    }
+                },
+                "enableFileUploadNotifications": false,
+                "cloudToDevice": {
+                    "maxDeliveryCount": 10,
+                    "defaultTtlAsIso8601": "PT1H",
+                    "feedback": {
+                        "lockDurationAsIso8601": "PT1M",
+                        "ttlAsIso8601": "PT1H",
+                        "maxDeliveryCount": 10
+                    }
+                },
+                "features": "GWV2, RootCertificateV2",
+                "disableLocalAuth": false,
+                "allowedFqdnList": [],
+                "enableDataResidency": false
+            }
+        },
+        {
+            "type": "microsoft.insights/actionGroups",
+            "apiVersion": "2023-01-01",
+            "name": "[parameters('actionGroups_Application_Insights_Smart_Detection_name')]",
+            "location": "Global",
+            "properties": {
+                "groupShortName": "SmartDetect",
+                "enabled": true,
+                "emailReceivers": [],
+                "smsReceivers": [],
+                "webhookReceivers": [],
+                "eventHubReceivers": [],
+                "itsmReceivers": [],
+                "azureAppPushReceivers": [],
+                "automationRunbookReceivers": [],
+                "voiceReceivers": [],
+                "logicAppReceivers": [],
+                "azureFunctionReceivers": [],
+                "armRoleReceivers": [
+                    {
+                        "name": "Monitoring Contributor",
+                        "roleId": "749f88d5-cbae-40b8-bcfc-e573ddc772fa",
+                        "useCommonAlertSchema": true
+                    },
+                    {
+                        "name": "Monitoring Reader",
+                        "roleId": "43d0d8ad-25c7-4714-9337-8ba259a9fe05",
+                        "useCommonAlertSchema": true
+                    }
+                ]
+            }
+        },
+        {
+            "type": "microsoft.insights/components",
+            "apiVersion": "2020-02-02",
+            "name": "[parameters('components_zaliczeniowe1ss_name')]",
+            "location": "polandcentral",
+            "kind": "web",
+            "properties": {
+                "Application_Type": "web",
+                "Flow_Type": "Redfield",
+                "Request_Source": "IbizaWebAppExtensionCreate",
+                "RetentionInDays": 90,
+                "WorkspaceResourceId": "[parameters('workspaces_DefaultWorkspace_027b0a11_67a4_40b4_a1ee_8056ad85aeb2_PLC_externalid')]",
+                "IngestionMode": "LogAnalytics",
+                "publicNetworkAccessForIngestion": "Enabled",
+                "publicNetworkAccessForQuery": "Enabled"
+            }
+        },
+        {
+            "type": "Microsoft.ServiceBus/namespaces",
+            "apiVersion": "2022-10-01-preview",
+            "name": "[parameters('namespaces_ul2024ss_name')]",
+            "location": "westeurope",
+            "sku": {
+                "name": "Basic",
+                "tier": "Basic"
+            },
+            "properties": {
+                "premiumMessagingPartitions": 0,
+                "minimumTlsVersion": "1.2",
+                "publicNetworkAccess": "Enabled",
+                "disableLocalAuth": false,
+                "privateEndpointConnections": [],
+                "zoneRedundant": false
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2023-04-01",
+            "name": "[parameters('storageAccounts_storageseby_name')]",
+            "location": "polandcentral",
+            "sku": {
+                "name": "Standard_LRS",
+                "tier": "Standard"
+            },
+            "kind": "StorageV2",
+            "properties": {
+                "dnsEndpointType": "Standard",
+                "defaultToOAuthAuthentication": false,
+                "publicNetworkAccess": "Enabled",
+                "allowCrossTenantReplication": false,
+                "minimumTlsVersion": "TLS1_2",
+                "allowBlobPublicAccess": false,
+                "allowSharedKeyAccess": true,
+                "networkAcls": {
+                    "bypass": "AzureServices",
+                    "virtualNetworkRules": [],
+                    "ipRules": [],
+                    "defaultAction": "Allow"
+                },
+                "supportsHttpsTrafficOnly": true,
+                "encryption": {
+                    "requireInfrastructureEncryption": false,
+                    "services": {
+                        "file": {
+                            "keyType": "Account",
+                            "enabled": true
+                        },
+                        "blob": {
+                            "keyType": "Account",
+                            "enabled": true
+                        }
+                    },
+                    "keySource": "Microsoft.Storage"
+                },
+                "accessTier": "Hot"
+            }
+        },
+        {
+            "type": "Microsoft.StreamAnalytics/streamingjobs",
+            "apiVersion": "2021-10-01-preview",
+            "name": "[parameters('streamingjobs_zaliczeniowyss_name')]",
+            "location": "Poland Central",
+            "tags": {
+                "hidden-link:/Microsoft.StreamAnalytics/streamingjobs/settings": "{\"createdFrom\":\"Portal\"}"
+            },
+            "sku": {
+                "name": "StandardV2",
+                "capacity": 10
+            },
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {
+                "sku": {
+                    "name": "StandardV2"
+                },
+                "outputStartMode": "JobStartTime",
+                "outputStartTime": "2024-05-18T09:53:36.227Z",
+                "eventsOutOfOrderPolicy": "Adjust",
+                "outputErrorPolicy": "Stop",
+                "eventsOutOfOrderMaxDelayInSeconds": 0,
+                "eventsLateArrivalMaxDelayInSeconds": 5,
+                "dataLocale": "en-US",
+                "compatibilityLevel": "1.2",
+                "contentStoragePolicy": "SystemAccount",
+                "jobType": "Cloud"
+            }
+        },
+        {
+            "type": "Microsoft.Web/serverfarms",
+            "apiVersion": "2023-01-01",
+            "name": "[parameters('serverfarms_ASP_zaliczenieiotul_b287_name')]",
+            "location": "Poland Central",
+            "sku": {
+                "name": "Y1",
+                "tier": "Dynamic",
+                "size": "Y1",
+                "family": "Y",
+                "capacity": 0
+            },
+            "kind": "functionapp",
+            "properties": {
+                "perSiteScaling": false,
+                "elasticScaleEnabled": false,
+                "maximumElasticWorkerCount": 1,
+                "isSpot": false,
+                "reserved": false,
+                "isXenon": false,
+                "hyperV": false,
+                "targetWorkerCount": 0,
+                "targetWorkerSizeId": 0,
+                "zoneRedundant": false
+            }
+        },
+        {
+            "type": "Microsoft.ApiManagement/service/apis",
+            "apiVersion": "2023-05-01-preview",
+            "name": "[concat(parameters('service_FunctionAppsDemoFunctionsapi_name'), '/FunctionAppsDemoFunctions')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service', parameters('service_FunctionAppsDemoFunctionsapi_name'))]"
+            ],
+            "properties": {
+                "displayName": "FunctionAppsDemoFunctions",
+                "apiRevision": "1",
+                "subscriptionRequired": true,
+                "protocols": [
+                    "https"
+                ],
+                "authenticationSettings": {
+                    "oAuth2AuthenticationSettings": [],
+                    "openidAuthenticationSettings": []
+                },
+                "subscriptionKeyParameterNames": {
+                    "header": "Ocp-Apim-Subscription-Key",
+                    "query": "subscription-key"
+                },
+                "isCurrent": true,
+                "path": "[parameters('apis_FunctionAppsDemoFunctions_path')]"
+            }
+        },
+        {
+            "type": "Microsoft.ApiManagement/service/policies",
+            "apiVersion": "2023-05-01-preview",
+            "name": "[concat(parameters('service_FunctionAppsDemoFunctionsapi_name'), '/policy')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service', parameters('service_FunctionAppsDemoFunctionsapi_name'))]"
+            ],
+            "properties": {
+                "value": "<!--\r\n    IMPORTANT:\r\n    - Policy elements can appear only within the <inbound>, <outbound>, <backend> section elements.\r\n    - Only the <forward-request> policy element can appear within the <backend> section element.\r\n    - To apply a policy to the incoming request (before it is forwarded to the backend service), place a corresponding policy element within the <inbound> section element.\r\n    - To apply a policy to the outgoing response (before it is sent back to the caller), place a corresponding policy element within the <outbound> section element.\r\n    - To add a policy position the cursor at the desired insertion point and click on the round button associated with the policy.\r\n    - To remove a policy, delete the corresponding policy statement from the policy document.\r\n    - Policies are applied in the order of their appearance, from the top down.\r\n-->\r\n<policies>\r\n  <inbound></inbound>\r\n  <backend>\r\n    <forward-request />\r\n  </backend>\r\n  <outbound></outbound>\r\n</policies>",
+                "format": "xml"
+            }
+        },
+        {
+            "type": "Microsoft.ApiManagement/service/subscriptions",
+            "apiVersion": "2023-05-01-preview",
+            "name": "[concat(parameters('service_FunctionAppsDemoFunctionsapi_name'), '/master')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service', parameters('service_FunctionAppsDemoFunctionsapi_name'))]"
+            ],
+            "properties": {
+                "scope": "[concat(resourceId('Microsoft.ApiManagement/service', parameters('service_FunctionAppsDemoFunctionsapi_name')), '/')]",
+                "displayName": "Built-in all-access subscription",
+                "state": "active",
+                "allowTracing": false
+            }
+        },
+        {
+            "type": "Microsoft.Communication/CommunicationServices",
+            "apiVersion": "2023-06-01-preview",
+            "name": "[parameters('CommunicationServices_zaliczenieiot_name')]",
+            "location": "global",
+            "dependsOn": [
+                "[resourceId('Microsoft.Communication/emailServices/domains', parameters('emailServices_email_seba_name'), 'AzureManagedDomain')]"
+            ],
+            "properties": {
+                "dataLocation": "Europe",
+                "linkedDomains": [
+                    "[resourceId('Microsoft.Communication/emailServices/domains', parameters('emailServices_email_seba_name'), 'AzureManagedDomain')]"
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Communication/emailServices/domains",
+            "apiVersion": "2023-06-01-preview",
+            "name": "[concat(parameters('emailServices_email_seba_name'), '/AzureManagedDomain')]",
+            "location": "global",
+            "dependsOn": [
+                "[resourceId('Microsoft.Communication/emailServices', parameters('emailServices_email_seba_name'))]"
+            ],
+            "properties": {
+                "domainManagement": "AzureManaged",
+                "userEngagementTracking": "Disabled"
+            }
+        },
+        {
+            "type": "microsoft.insights/components/ProactiveDetectionConfigs",
+            "apiVersion": "2018-05-01-preview",
+            "name": "[concat(parameters('components_zaliczeniowe1ss_name'), '/degradationindependencyduration')]",
+            "location": "polandcentral",
+            "dependsOn": [
+                "[resourceId('microsoft.insights/components', parameters('components_zaliczeniowe1ss_name'))]"
+            ],
+            "properties": {
+                "ruleDefinitions": {
+                    "Name": "degradationindependencyduration",
+                    "DisplayName": "Degradation in dependency duration",
+                    "Description": "Smart Detection rules notify you of performance anomaly issues.",
+                    "HelpUrl": "https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics",
+                    "IsHidden": false,
+                    "IsEnabledByDefault": true,
+                    "IsInPreview": false,
+                    "SupportsEmailNotifications": true
+                },
+                "enabled": true,
+                "sendEmailsToSubscriptionOwners": true,
+                "customEmails": []
+            }
+        },
+        {
+            "type": "microsoft.insights/components/ProactiveDetectionConfigs",
+            "apiVersion": "2018-05-01-preview",
+            "name": "[concat(parameters('components_zaliczeniowe1ss_name'), '/degradationinserverresponsetime')]",
+            "location": "polandcentral",
+            "dependsOn": [
+                "[resourceId('microsoft.insights/components', parameters('components_zaliczeniowe1ss_name'))]"
+            ],
+            "properties": {
+                "ruleDefinitions": {
+                    "Name": "degradationinserverresponsetime",
+                    "DisplayName": "Degradation in server response time",
+                    "Description": "Smart Detection rules notify you of performance anomaly issues.",
+                    "HelpUrl": "https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics",
+                    "IsHidden": false,
+                    "IsEnabledByDefault": true,
+                    "IsInPreview": false,
+                    "SupportsEmailNotifications": true
+                },
+                "enabled": true,
+                "sendEmailsToSubscriptionOwners": true,
+                "customEmails": []
+            }
+        },
+        {
+            "type": "microsoft.insights/components/ProactiveDetectionConfigs",
+            "apiVersion": "2018-05-01-preview",
+            "name": "[concat(parameters('components_zaliczeniowe1ss_name'), '/digestMailConfiguration')]",
+            "location": "polandcentral",
+            "dependsOn": [
+                "[resourceId('microsoft.insights/components', parameters('components_zaliczeniowe1ss_name'))]"
+            ],
+            "properties": {
+                "ruleDefinitions": {
+                    "Name": "digestMailConfiguration",
+                    "DisplayName": "Digest Mail Configuration",
+                    "Description": "This rule describes the digest mail preferences",
+                    "HelpUrl": "www.homail.com",
+                    "IsHidden": true,
+                    "IsEnabledByDefault": true,
+                    "IsInPreview": false,
+                    "SupportsEmailNotifications": true
+                },
+                "enabled": true,
+                "sendEmailsToSubscriptionOwners": true,
+                "customEmails": []
+            }
+        },
+        {
+            "type": "microsoft.insights/components/ProactiveDetectionConfigs",
+            "apiVersion": "2018-05-01-preview",
+            "name": "[concat(parameters('components_zaliczeniowe1ss_name'), '/extension_billingdatavolumedailyspikeextension')]",
+            "location": "polandcentral",
+            "dependsOn": [
+                "[resourceId('microsoft.insights/components', parameters('components_zaliczeniowe1ss_name'))]"
+            ],
+            "properties": {
+                "ruleDefinitions": {
+                    "Name": "extension_billingdatavolumedailyspikeextension",
+                    "DisplayName": "Abnormal rise in daily data volume (preview)",
+                    "Description": "This detection rule automatically analyzes the billing data generated by your application, and can warn you about an unusual increase in your application's billing costs",
+                    "HelpUrl": "https://github.com/Microsoft/ApplicationInsights-Home/tree/master/SmartDetection/billing-data-volume-daily-spike.md",
+                    "IsHidden": false,
+                    "IsEnabledByDefault": true,
+                    "IsInPreview": true,
+                    "SupportsEmailNotifications": false
+                },
+                "enabled": true,
+                "sendEmailsToSubscriptionOwners": true,
+                "customEmails": []
+            }
+        },
+        {
+            "type": "microsoft.insights/components/ProactiveDetectionConfigs",
+            "apiVersion": "2018-05-01-preview",
+            "name": "[concat(parameters('components_zaliczeniowe1ss_name'), '/extension_canaryextension')]",
+            "location": "polandcentral",
+            "dependsOn": [
+                "[resourceId('microsoft.insights/components', parameters('components_zaliczeniowe1ss_name'))]"
+            ],
+            "properties": {
+                "ruleDefinitions": {
+                    "Name": "extension_canaryextension",
+                    "DisplayName": "Canary extension",
+                    "Description": "Canary extension",
+                    "HelpUrl": "https://github.com/Microsoft/ApplicationInsights-Home/blob/master/SmartDetection/",
+                    "IsHidden": true,
+                    "IsEnabledByDefault": true,
+                    "IsInPreview": true,
+                    "SupportsEmailNotifications": false
+                },
+                "enabled": true,
+                "sendEmailsToSubscriptionOwners": true,
+                "customEmails": []
+            }
+        },
+        {
+            "type": "microsoft.insights/components/ProactiveDetectionConfigs",
+            "apiVersion": "2018-05-01-preview",
+            "name": "[concat(parameters('components_zaliczeniowe1ss_name'), '/extension_exceptionchangeextension')]",
+            "location": "polandcentral",
+            "dependsOn": [
+                "[resourceId('microsoft.insights/components', parameters('components_zaliczeniowe1ss_name'))]"
+            ],
+            "properties": {
+                "ruleDefinitions": {
+                    "Name": "extension_exceptionchangeextension",
+                    "DisplayName": "Abnormal rise in exception volume (preview)",
+                    "Description": "This detection rule automatically analyzes the exceptions thrown in your application, and can warn you about unusual patterns in your exception telemetry.",
+                    "HelpUrl": "https://github.com/Microsoft/ApplicationInsights-Home/blob/master/SmartDetection/abnormal-rise-in-exception-volume.md",
+                    "IsHidden": false,
+                    "IsEnabledByDefault": true,
+                    "IsInPreview": true,
+                    "SupportsEmailNotifications": false
+                },
+                "enabled": true,
+                "sendEmailsToSubscriptionOwners": true,
+                "customEmails": []
+            }
+        },
+        {
+            "type": "microsoft.insights/components/ProactiveDetectionConfigs",
+            "apiVersion": "2018-05-01-preview",
+            "name": "[concat(parameters('components_zaliczeniowe1ss_name'), '/extension_memoryleakextension')]",
+            "location": "polandcentral",
+            "dependsOn": [
+                "[resourceId('microsoft.insights/components', parameters('components_zaliczeniowe1ss_name'))]"
+            ],
+            "properties": {
+                "ruleDefinitions": {
+                    "Name": "extension_memoryleakextension",
+                    "DisplayName": "Potential memory leak detected (preview)",
+                    "Description": "This detection rule automatically analyzes the memory consumption of each process in your application, and can warn you about potential memory leaks or increased memory consumption.",
+                    "HelpUrl": "https://github.com/Microsoft/ApplicationInsights-Home/tree/master/SmartDetection/memory-leak.md",
+                    "IsHidden": false,
+                    "IsEnabledByDefault": true,
+                    "IsInPreview": true,
+                    "SupportsEmailNotifications": false
+                },
+                "enabled": true,
+                "sendEmailsToSubscriptionOwners": true,
+                "customEmails": []
+            }
+        },
+        {
+            "type": "microsoft.insights/components/ProactiveDetectionConfigs",
+            "apiVersion": "2018-05-01-preview",
+            "name": "[concat(parameters('components_zaliczeniowe1ss_name'), '/extension_securityextensionspackage')]",
+            "location": "polandcentral",
+            "dependsOn": [
+                "[resourceId('microsoft.insights/components', parameters('components_zaliczeniowe1ss_name'))]"
+            ],
+            "properties": {
+                "ruleDefinitions": {
+                    "Name": "extension_securityextensionspackage",
+                    "DisplayName": "Potential security issue detected (preview)",
+                    "Description": "This detection rule automatically analyzes the telemetry generated by your application and detects potential security issues.",
+                    "HelpUrl": "https://github.com/Microsoft/ApplicationInsights-Home/blob/master/SmartDetection/application-security-detection-pack.md",
+                    "IsHidden": false,
+                    "IsEnabledByDefault": true,
+                    "IsInPreview": true,
+                    "SupportsEmailNotifications": false
+                },
+                "enabled": true,
+                "sendEmailsToSubscriptionOwners": true,
+                "customEmails": []
+            }
+        },
+        {
+            "type": "microsoft.insights/components/ProactiveDetectionConfigs",
+            "apiVersion": "2018-05-01-preview",
+            "name": "[concat(parameters('components_zaliczeniowe1ss_name'), '/extension_traceseveritydetector')]",
+            "location": "polandcentral",
+            "dependsOn": [
+                "[resourceId('microsoft.insights/components', parameters('components_zaliczeniowe1ss_name'))]"
+            ],
+            "properties": {
+                "ruleDefinitions": {
+                    "Name": "extension_traceseveritydetector",
+                    "DisplayName": "Degradation in trace severity ratio (preview)",
+                    "Description": "This detection rule automatically analyzes the trace logs emitted from your application, and can warn you about unusual patterns in the severity of your trace telemetry.",
+                    "HelpUrl": "https://github.com/Microsoft/ApplicationInsights-Home/blob/master/SmartDetection/degradation-in-trace-severity-ratio.md",
+                    "IsHidden": false,
+                    "IsEnabledByDefault": true,
+                    "IsInPreview": true,
+                    "SupportsEmailNotifications": false
+                },
+                "enabled": true,
+                "sendEmailsToSubscriptionOwners": true,
+                "customEmails": []
+            }
+        },
+        {
+            "type": "microsoft.insights/components/ProactiveDetectionConfigs",
+            "apiVersion": "2018-05-01-preview",
+            "name": "[concat(parameters('components_zaliczeniowe1ss_name'), '/longdependencyduration')]",
+            "location": "polandcentral",
+            "dependsOn": [
+                "[resourceId('microsoft.insights/components', parameters('components_zaliczeniowe1ss_name'))]"
+            ],
+            "properties": {
+                "ruleDefinitions": {
+                    "Name": "longdependencyduration",
+                    "DisplayName": "Long dependency duration",
+                    "Description": "Smart Detection rules notify you of performance anomaly issues.",
+                    "HelpUrl": "https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics",
+                    "IsHidden": false,
+                    "IsEnabledByDefault": true,
+                    "IsInPreview": false,
+                    "SupportsEmailNotifications": true
+                },
+                "enabled": true,
+                "sendEmailsToSubscriptionOwners": true,
+                "customEmails": []
+            }
+        },
+        {
+            "type": "microsoft.insights/components/ProactiveDetectionConfigs",
+            "apiVersion": "2018-05-01-preview",
+            "name": "[concat(parameters('components_zaliczeniowe1ss_name'), '/migrationToAlertRulesCompleted')]",
+            "location": "polandcentral",
+            "dependsOn": [
+                "[resourceId('microsoft.insights/components', parameters('components_zaliczeniowe1ss_name'))]"
+            ],
+            "properties": {
+                "ruleDefinitions": {
+                    "Name": "migrationToAlertRulesCompleted",
+                    "DisplayName": "Migration To Alert Rules Completed",
+                    "Description": "A configuration that controls the migration state of Smart Detection to Smart Alerts",
+                    "HelpUrl": "https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics",
+                    "IsHidden": true,
+                    "IsEnabledByDefault": false,
+                    "IsInPreview": true,
+                    "SupportsEmailNotifications": false
+                },
+                "enabled": false,
+                "sendEmailsToSubscriptionOwners": true,
+                "customEmails": []
+            }
+        },
+        {
+            "type": "microsoft.insights/components/ProactiveDetectionConfigs",
+            "apiVersion": "2018-05-01-preview",
+            "name": "[concat(parameters('components_zaliczeniowe1ss_name'), '/slowpageloadtime')]",
+            "location": "polandcentral",
+            "dependsOn": [
+                "[resourceId('microsoft.insights/components', parameters('components_zaliczeniowe1ss_name'))]"
+            ],
+            "properties": {
+                "ruleDefinitions": {
+                    "Name": "slowpageloadtime",
+                    "DisplayName": "Slow page load time",
+                    "Description": "Smart Detection rules notify you of performance anomaly issues.",
+                    "HelpUrl": "https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics",
+                    "IsHidden": false,
+                    "IsEnabledByDefault": true,
+                    "IsInPreview": false,
+                    "SupportsEmailNotifications": true
+                },
+                "enabled": true,
+                "sendEmailsToSubscriptionOwners": true,
+                "customEmails": []
+            }
+        },
+        {
+            "type": "microsoft.insights/components/ProactiveDetectionConfigs",
+            "apiVersion": "2018-05-01-preview",
+            "name": "[concat(parameters('components_zaliczeniowe1ss_name'), '/slowserverresponsetime')]",
+            "location": "polandcentral",
+            "dependsOn": [
+                "[resourceId('microsoft.insights/components', parameters('components_zaliczeniowe1ss_name'))]"
+            ],
+            "properties": {
+                "ruleDefinitions": {
+                    "Name": "slowserverresponsetime",
+                    "DisplayName": "Slow server response time",
+                    "Description": "Smart Detection rules notify you of performance anomaly issues.",
+                    "HelpUrl": "https://docs.microsoft.com/en-us/azure/application-insights/app-insights-proactive-performance-diagnostics",
+                    "IsHidden": false,
+                    "IsEnabledByDefault": true,
+                    "IsInPreview": false,
+                    "SupportsEmailNotifications": true
+                },
+                "enabled": true,
+                "sendEmailsToSubscriptionOwners": true,
+                "customEmails": []
+            }
+        },
+        {
+            "type": "Microsoft.ServiceBus/namespaces/authorizationrules",
+            "apiVersion": "2022-10-01-preview",
+            "name": "[concat(parameters('namespaces_ul2024ss_name'), '/RootManageSharedAccessKey')]",
+            "location": "westeurope",
+            "dependsOn": [
+                "[resourceId('Microsoft.ServiceBus/namespaces', parameters('namespaces_ul2024ss_name'))]"
+            ],
+            "properties": {
+                "rights": [
+                    "Listen",
+                    "Manage",
+                    "Send"
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.ServiceBus/namespaces/networkrulesets",
+            "apiVersion": "2022-10-01-preview",
+            "name": "[concat(parameters('namespaces_ul2024ss_name'), '/default')]",
+            "location": "westeurope",
+            "dependsOn": [
+                "[resourceId('Microsoft.ServiceBus/namespaces', parameters('namespaces_ul2024ss_name'))]"
+            ],
+            "properties": {
+                "publicNetworkAccess": "Enabled",
+                "defaultAction": "Allow",
+                "virtualNetworkRules": [],
+                "ipRules": [],
+                "trustedServiceAccessEnabled": false
+            }
+        },
+        {
+            "type": "Microsoft.ServiceBus/namespaces/queues",
+            "apiVersion": "2022-10-01-preview",
+            "name": "[concat(parameters('namespaces_ul2024ss_name'), '/aloterrors')]",
+            "location": "westeurope",
+            "dependsOn": [
+                "[resourceId('Microsoft.ServiceBus/namespaces', parameters('namespaces_ul2024ss_name'))]"
+            ],
+            "properties": {
+                "maxMessageSizeInKilobytes": 256,
+                "lockDuration": "PT1M",
+                "maxSizeInMegabytes": 1024,
+                "requiresDuplicateDetection": false,
+                "requiresSession": false,
+                "defaultMessageTimeToLive": "P14D",
+                "deadLetteringOnMessageExpiration": false,
+                "enableBatchedOperations": true,
+                "duplicateDetectionHistoryTimeWindow": "PT10M",
+                "maxDeliveryCount": 10,
+                "status": "Active",
+                "autoDeleteOnIdle": "P10675199DT2H48M5.4775807S",
+                "enablePartitioning": false,
+                "enableExpress": false
+            }
+        },
+        {
+            "type": "Microsoft.ServiceBus/namespaces/queues",
+            "apiVersion": "2022-10-01-preview",
+            "name": "[concat(parameters('namespaces_ul2024ss_name'), '/myqueue')]",
+            "location": "westeurope",
+            "dependsOn": [
+                "[resourceId('Microsoft.ServiceBus/namespaces', parameters('namespaces_ul2024ss_name'))]"
+            ],
+            "properties": {
+                "maxMessageSizeInKilobytes": 256,
+                "lockDuration": "PT1M",
+                "maxSizeInMegabytes": 1024,
+                "requiresDuplicateDetection": false,
+                "requiresSession": false,
+                "defaultMessageTimeToLive": "P14D",
+                "deadLetteringOnMessageExpiration": false,
+                "enableBatchedOperations": true,
+                "duplicateDetectionHistoryTimeWindow": "PT10M",
+                "maxDeliveryCount": 10,
+                "status": "Active",
+                "autoDeleteOnIdle": "P10675199DT2H48M5.4775807S",
+                "enablePartitioning": false,
+                "enableExpress": false
+            }
+        },
+        {
+            "type": "Microsoft.ServiceBus/namespaces/queues",
+            "apiVersion": "2022-10-01-preview",
+            "name": "[concat(parameters('namespaces_ul2024ss_name'), '/production')]",
+            "location": "westeurope",
+            "dependsOn": [
+                "[resourceId('Microsoft.ServiceBus/namespaces', parameters('namespaces_ul2024ss_name'))]"
+            ],
+            "properties": {
+                "maxMessageSizeInKilobytes": 256,
+                "lockDuration": "PT1M",
+                "maxSizeInMegabytes": 1024,
+                "requiresDuplicateDetection": false,
+                "requiresSession": false,
+                "defaultMessageTimeToLive": "P14D",
+                "deadLetteringOnMessageExpiration": false,
+                "enableBatchedOperations": true,
+                "duplicateDetectionHistoryTimeWindow": "PT10M",
+                "maxDeliveryCount": 10,
+                "status": "Active",
+                "autoDeleteOnIdle": "P10675199DT2H48M5.4775807S",
+                "enablePartitioning": false,
+                "enableExpress": false
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/blobServices",
+            "apiVersion": "2023-04-01",
+            "name": "[concat(parameters('storageAccounts_storageseby_name'), '/default')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_storageseby_name'))]"
+            ],
+            "sku": {
+                "name": "Standard_LRS",
+                "tier": "Standard"
+            },
+            "properties": {
+                "containerDeleteRetentionPolicy": {
+                    "enabled": true,
+                    "days": 7
+                },
+                "cors": {
+                    "corsRules": []
+                },
+                "deleteRetentionPolicy": {
+                    "allowPermanentDelete": false,
+                    "enabled": true,
+                    "days": 7
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/fileServices",
+            "apiVersion": "2023-04-01",
+            "name": "[concat(parameters('storageAccounts_storageseby_name'), '/default')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_storageseby_name'))]"
+            ],
+            "sku": {
+                "name": "Standard_LRS",
+                "tier": "Standard"
+            },
+            "properties": {
+                "protocolSettings": {
+                    "smb": {}
+                },
+                "cors": {
+                    "corsRules": []
+                },
+                "shareDeleteRetentionPolicy": {
+                    "enabled": true,
+                    "days": 7
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/queueServices",
+            "apiVersion": "2023-04-01",
+            "name": "[concat(parameters('storageAccounts_storageseby_name'), '/default')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_storageseby_name'))]"
+            ],
+            "properties": {
+                "cors": {
+                    "corsRules": []
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/tableServices",
+            "apiVersion": "2023-04-01",
+            "name": "[concat(parameters('storageAccounts_storageseby_name'), '/default')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_storageseby_name'))]"
+            ],
+            "properties": {
+                "cors": {
+                    "corsRules": []
+                }
+            }
+        },
+        {
+            "type": "Microsoft.StreamAnalytics/streamingjobs/inputs",
+            "apiVersion": "2021-10-01-preview",
+            "name": "[concat(parameters('streamingjobs_zaliczeniowyss_name'), '/iot-seba')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.StreamAnalytics/streamingjobs', parameters('streamingjobs_zaliczeniowyss_name'))]"
+            ],
+            "properties": {
+                "type": "Stream",
+                "datasource": {
+                    "type": "Microsoft.Devices/IotHubs",
+                    "properties": {
+                        "iotHubNamespace": "iot-seba",
+                        "sharedAccessPolicyName": "iothubowner",
+                        "endpoint": "messages/events",
+                        "consumerGroupName": "$Default"
+                    }
+                },
+                "compression": {
+                    "type": "None"
+                },
+                "serialization": {
+                    "type": "Json",
+                    "properties": {
+                        "encoding": "UTF8"
+                    }
+                }
+            }
+        },
+        {
+            "type": "Microsoft.StreamAnalytics/streamingjobs/outputs",
+            "apiVersion": "2021-10-01-preview",
+            "name": "[concat(parameters('streamingjobs_zaliczeniowyss_name'), '/aloterrors')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.StreamAnalytics/streamingjobs', parameters('streamingjobs_zaliczeniowyss_name'))]"
+            ],
+            "properties": {
+                "datasource": {
+                    "type": "Microsoft.ServiceBus/Queue",
+                    "properties": {
+                        "queueName": "aloterrors",
+                        "propertyColumns": [],
+                        "systemPropertyColumns": {},
+                        "serviceBusNamespace": "ul2024ss",
+                        "sharedAccessPolicyName": "RootManageSharedAccessKey",
+                        "authenticationMode": "ConnectionString"
+                    }
+                },
+                "serialization": {
+                    "type": "Json",
+                    "properties": {
+                        "encoding": "UTF8",
+                        "format": "LineSeparated"
+                    }
+                }
+            }
+        },
+        {
+            "type": "Microsoft.StreamAnalytics/streamingjobs/outputs",
+            "apiVersion": "2021-10-01-preview",
+            "name": "[concat(parameters('streamingjobs_zaliczeniowyss_name'), '/kontenerseby')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.StreamAnalytics/streamingjobs', parameters('streamingjobs_zaliczeniowyss_name'))]"
+            ],
+            "properties": {
+                "datasource": {
+                    "type": "Microsoft.Storage/Blob",
+                    "properties": {
+                        "blobWriteMode": "Append",
+                        "storageAccounts": [
+                            {
+                                "accountName": "storageseby"
+                            }
+                        ],
+                        "container": "kontenerseby",
+                        "dateFormat": "yyyy/MM/dd",
+                        "timeFormat": "HH",
+                        "authenticationMode": "ConnectionString"
+                    }
+                },
+                "serialization": {
+                    "type": "Json",
+                    "properties": {
+                        "encoding": "UTF8",
+                        "format": "LineSeparated"
+                    }
+                }
+            }
+        },
+        {
+            "type": "Microsoft.StreamAnalytics/streamingjobs/outputs",
+            "apiVersion": "2021-10-01-preview",
+            "name": "[concat(parameters('streamingjobs_zaliczeniowyss_name'), '/myqueue')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.StreamAnalytics/streamingjobs', parameters('streamingjobs_zaliczeniowyss_name'))]"
+            ],
+            "properties": {
+                "datasource": {
+                    "type": "Microsoft.ServiceBus/Queue",
+                    "properties": {
+                        "queueName": "myqueue",
+                        "propertyColumns": [],
+                        "systemPropertyColumns": {},
+                        "serviceBusNamespace": "ul2024ss",
+                        "sharedAccessPolicyName": "iothubroutes_iot-seba",
+                        "authenticationMode": "ConnectionString"
+                    }
+                },
+                "serialization": {
+                    "type": "Json",
+                    "properties": {
+                        "encoding": "UTF8",
+                        "format": "LineSeparated"
+                    }
+                }
+            }
+        },
+        {
+            "type": "Microsoft.StreamAnalytics/streamingjobs/outputs",
+            "apiVersion": "2021-10-01-preview",
+            "name": "[concat(parameters('streamingjobs_zaliczeniowyss_name'), '/production')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.StreamAnalytics/streamingjobs', parameters('streamingjobs_zaliczeniowyss_name'))]"
+            ],
+            "properties": {
+                "datasource": {
+                    "type": "Microsoft.ServiceBus/Queue",
+                    "properties": {
+                        "queueName": "production",
+                        "propertyColumns": [],
+                        "systemPropertyColumns": {},
+                        "serviceBusNamespace": "ul2024ss",
+                        "sharedAccessPolicyName": "RootManageSharedAccessKey",
+                        "authenticationMode": "ConnectionString"
+                    }
+                },
+                "serialization": {
+                    "type": "Json",
+                    "properties": {
+                        "encoding": "UTF8",
+                        "format": "LineSeparated"
+                    }
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites",
+            "apiVersion": "2023-01-01",
+            "name": "[parameters('sites_zaliczeniowe1ss_name')]",
+            "location": "Poland Central",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/serverfarms', parameters('serverfarms_ASP_zaliczenieiotul_b287_name'))]"
+            ],
+            "tags": {
+                "hidden-link: /app-insights-resource-id": "/subscriptions/027b0a11-67a4-40b4-a1ee-8056ad85aeb2/resourceGroups/zaliczenie_iot_ul/providers/microsoft.insights/components/zaliczeniowe1ss",
+                "hidden-link: /app-insights-instrumentation-key": "4e318326-a394-4330-84e4-bfeef69c2a27",
+                "hidden-link: /app-insights-conn-string": "InstrumentationKey=4e318326-a394-4330-84e4-bfeef69c2a27;IngestionEndpoint=https://polandcentral-0.in.applicationinsights.azure.com/;LiveEndpoint=https://polandcentral.livediagnostics.monitor.azure.com/;ApplicationId=2ed594aa-4868-4a12-ace2-df333171ef7c"
+            },
+            "kind": "functionapp",
+            "properties": {
+                "enabled": true,
+                "hostNameSslStates": [
+                    {
+                        "name": "[concat(parameters('sites_zaliczeniowe1ss_name'), '.azurewebsites.net')]",
+                        "sslState": "Disabled",
+                        "hostType": "Standard"
+                    },
+                    {
+                        "name": "[concat(parameters('sites_zaliczeniowe1ss_name'), '.scm.azurewebsites.net')]",
+                        "sslState": "Disabled",
+                        "hostType": "Repository"
+                    }
+                ],
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('serverfarms_ASP_zaliczenieiotul_b287_name'))]",
+                "reserved": false,
+                "isXenon": false,
+                "hyperV": false,
+                "vnetRouteAllEnabled": false,
+                "vnetImagePullEnabled": false,
+                "vnetContentShareEnabled": false,
+                "siteConfig": {
+                    "numberOfWorkers": 1,
+                    "acrUseManagedIdentityCreds": false,
+                    "alwaysOn": false,
+                    "http20Enabled": false,
+                    "functionAppScaleLimit": 200,
+                    "minimumElasticInstanceCount": 0
+                },
+                "scmSiteAlsoStopped": false,
+                "clientAffinityEnabled": false,
+                "clientCertEnabled": false,
+                "clientCertMode": "Required",
+                "hostNamesDisabled": false,
+                "customDomainVerificationId": "509017642BE31AA346120972F7BD9653C891AA94AB239F30F357AA9BC4C92F51",
+                "containerSize": 1536,
+                "dailyMemoryTimeQuota": 0,
+                "httpsOnly": true,
+                "redundancyMode": "None",
+                "publicNetworkAccess": "Enabled",
+                "storageAccountRequired": false,
+                "keyVaultReferenceIdentity": "SystemAssigned"
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/basicPublishingCredentialsPolicies",
+            "apiVersion": "2023-01-01",
+            "name": "[concat(parameters('sites_zaliczeniowe1ss_name'), '/ftp')]",
+            "location": "Poland Central",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_zaliczeniowe1ss_name'))]"
+            ],
+            "tags": {
+                "hidden-link: /app-insights-resource-id": "/subscriptions/027b0a11-67a4-40b4-a1ee-8056ad85aeb2/resourceGroups/zaliczenie_iot_ul/providers/microsoft.insights/components/zaliczeniowe1ss",
+                "hidden-link: /app-insights-instrumentation-key": "4e318326-a394-4330-84e4-bfeef69c2a27",
+                "hidden-link: /app-insights-conn-string": "InstrumentationKey=4e318326-a394-4330-84e4-bfeef69c2a27;IngestionEndpoint=https://polandcentral-0.in.applicationinsights.azure.com/;LiveEndpoint=https://polandcentral.livediagnostics.monitor.azure.com/;ApplicationId=2ed594aa-4868-4a12-ace2-df333171ef7c"
+            },
+            "properties": {
+                "allow": false
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/basicPublishingCredentialsPolicies",
+            "apiVersion": "2023-01-01",
+            "name": "[concat(parameters('sites_zaliczeniowe1ss_name'), '/scm')]",
+            "location": "Poland Central",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_zaliczeniowe1ss_name'))]"
+            ],
+            "tags": {
+                "hidden-link: /app-insights-resource-id": "/subscriptions/027b0a11-67a4-40b4-a1ee-8056ad85aeb2/resourceGroups/zaliczenie_iot_ul/providers/microsoft.insights/components/zaliczeniowe1ss",
+                "hidden-link: /app-insights-instrumentation-key": "4e318326-a394-4330-84e4-bfeef69c2a27",
+                "hidden-link: /app-insights-conn-string": "InstrumentationKey=4e318326-a394-4330-84e4-bfeef69c2a27;IngestionEndpoint=https://polandcentral-0.in.applicationinsights.azure.com/;LiveEndpoint=https://polandcentral.livediagnostics.monitor.azure.com/;ApplicationId=2ed594aa-4868-4a12-ace2-df333171ef7c"
+            },
+            "properties": {
+                "allow": true
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/config",
+            "apiVersion": "2023-01-01",
+            "name": "[concat(parameters('sites_zaliczeniowe1ss_name'), '/web')]",
+            "location": "Poland Central",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_zaliczeniowe1ss_name'))]"
+            ],
+            "tags": {
+                "hidden-link: /app-insights-resource-id": "/subscriptions/027b0a11-67a4-40b4-a1ee-8056ad85aeb2/resourceGroups/zaliczenie_iot_ul/providers/microsoft.insights/components/zaliczeniowe1ss",
+                "hidden-link: /app-insights-instrumentation-key": "4e318326-a394-4330-84e4-bfeef69c2a27",
+                "hidden-link: /app-insights-conn-string": "InstrumentationKey=4e318326-a394-4330-84e4-bfeef69c2a27;IngestionEndpoint=https://polandcentral-0.in.applicationinsights.azure.com/;LiveEndpoint=https://polandcentral.livediagnostics.monitor.azure.com/;ApplicationId=2ed594aa-4868-4a12-ace2-df333171ef7c"
+            },
+            "properties": {
+                "numberOfWorkers": 1,
+                "defaultDocuments": [
+                    "Default.htm",
+                    "Default.html",
+                    "Default.asp",
+                    "index.htm",
+                    "index.html",
+                    "iisstart.htm",
+                    "default.aspx",
+                    "index.php"
+                ],
+                "netFrameworkVersion": "v6.0",
+                "requestTracingEnabled": false,
+                "remoteDebuggingEnabled": false,
+                "remoteDebuggingVersion": "VS2019",
+                "httpLoggingEnabled": false,
+                "acrUseManagedIdentityCreds": false,
+                "logsDirectorySizeLimit": 35,
+                "detailedErrorLoggingEnabled": false,
+                "publishingUsername": "$zaliczeniowe1ss",
+                "scmType": "None",
+                "use32BitWorkerProcess": false,
+                "webSocketsEnabled": false,
+                "alwaysOn": false,
+                "managedPipelineMode": "Integrated",
+                "virtualApplications": [
+                    {
+                        "virtualPath": "/",
+                        "physicalPath": "site\\wwwroot",
+                        "preloadEnabled": false
+                    }
+                ],
+                "loadBalancing": "LeastRequests",
+                "experiments": {
+                    "rampUpRules": []
+                },
+                "autoHealEnabled": false,
+                "vnetRouteAllEnabled": false,
+                "vnetPrivatePortsCount": 0,
+                "publicNetworkAccess": "Enabled",
+                "cors": {
+                    "allowedOrigins": [
+                        "https://portal.azure.com"
+                    ],
+                    "supportCredentials": false
+                },
+                "localMySqlEnabled": false,
+                "ipSecurityRestrictions": [
+                    {
+                        "ipAddress": "Any",
+                        "action": "Allow",
+                        "priority": 2147483647,
+                        "name": "Allow all",
+                        "description": "Allow all access"
+                    }
+                ],
+                "scmIpSecurityRestrictions": [
+                    {
+                        "ipAddress": "Any",
+                        "action": "Allow",
+                        "priority": 2147483647,
+                        "name": "Allow all",
+                        "description": "Allow all access"
+                    }
+                ],
+                "scmIpSecurityRestrictionsUseMain": false,
+                "http20Enabled": false,
+                "minTlsVersion": "1.2",
+                "scmMinTlsVersion": "1.2",
+                "ftpsState": "FtpsOnly",
+                "preWarmedInstanceCount": 0,
+                "functionAppScaleLimit": 200,
+                "functionsRuntimeScaleMonitoringEnabled": false,
+                "minimumElasticInstanceCount": 0,
+                "azureStorageAccounts": {}
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/deployments",
+            "apiVersion": "2023-01-01",
+            "name": "[concat(parameters('sites_zaliczeniowe1ss_name'), '/1fd4e1ddbf824802b2b27b10ce967c76')]",
+            "location": "Poland Central",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_zaliczeniowe1ss_name'))]"
+            ],
+            "properties": {
+                "status": 4,
+                "author_email": "N/A",
+                "author": "N/A",
+                "deployer": "ZipDeploy",
+                "message": "Created via a push deployment",
+                "start_time": "2024-05-18T10:56:32.7942549Z",
+                "end_time": "2024-05-18T10:56:33.8914501Z",
+                "active": true
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/deployments",
+            "apiVersion": "2023-01-01",
+            "name": "[concat(parameters('sites_zaliczeniowe1ss_name'), '/638fbbeb5a3f450c87a00db5f00661ad')]",
+            "location": "Poland Central",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_zaliczeniowe1ss_name'))]"
+            ],
+            "properties": {
+                "status": 4,
+                "author_email": "N/A",
+                "author": "N/A",
+                "deployer": "ZipDeploy",
+                "message": "Created via a push deployment",
+                "start_time": "2024-05-15T20:38:32.8660687Z",
+                "end_time": "2024-05-15T20:38:34.0544579Z",
+                "active": false
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/deployments",
+            "apiVersion": "2023-01-01",
+            "name": "[concat(parameters('sites_zaliczeniowe1ss_name'), '/74e5518e9116423cb73b8b201625eb32')]",
+            "location": "Poland Central",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_zaliczeniowe1ss_name'))]"
+            ],
+            "properties": {
+                "status": 4,
+                "author_email": "N/A",
+                "author": "N/A",
+                "deployer": "ZipDeploy",
+                "message": "Created via a push deployment",
+                "start_time": "2024-05-15T22:20:40.567725Z",
+                "end_time": "2024-05-15T22:20:41.5762439Z",
+                "active": false
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/deployments",
+            "apiVersion": "2023-01-01",
+            "name": "[concat(parameters('sites_zaliczeniowe1ss_name'), '/ea707670b5b640b1b671052d49d0c8f7')]",
+            "location": "Poland Central",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_zaliczeniowe1ss_name'))]"
+            ],
+            "properties": {
+                "status": 4,
+                "author_email": "N/A",
+                "author": "N/A",
+                "deployer": "ZipDeploy",
+                "message": "Created via a push deployment",
+                "start_time": "2024-05-17T22:27:46.0425031Z",
+                "end_time": "2024-05-17T22:27:47.6987384Z",
+                "active": false
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/deployments",
+            "apiVersion": "2023-01-01",
+            "name": "[concat(parameters('sites_zaliczeniowe1ss_name'), '/fb715badee694676a4ec2c459b428001')]",
+            "location": "Poland Central",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_zaliczeniowe1ss_name'))]"
+            ],
+            "properties": {
+                "status": 4,
+                "author_email": "N/A",
+                "author": "N/A",
+                "deployer": "ZipDeploy",
+                "message": "Created via a push deployment",
+                "start_time": "2024-05-14T11:29:13.1158393Z",
+                "end_time": "2024-05-14T11:29:14.2252206Z",
+                "active": false
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/functions",
+            "apiVersion": "2023-01-01",
+            "name": "[concat(parameters('sites_zaliczeniowe1ss_name'), '/ErrorEvent')]",
+            "location": "Poland Central",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_zaliczeniowe1ss_name'))]"
+            ],
+            "properties": {
+                "script_root_path_href": "https://zaliczeniowe1ss.azurewebsites.net/admin/vfs/site/wwwroot/ErrorEvent/",
+                "script_href": "https://zaliczeniowe1ss.azurewebsites.net/admin/vfs/site/wwwroot/bin/FunctionAppsDemo.Functions.dll",
+                "config_href": "https://zaliczeniowe1ss.azurewebsites.net/admin/vfs/site/wwwroot/ErrorEvent/function.json",
+                "test_data_href": "https://zaliczeniowe1ss.azurewebsites.net/admin/vfs/data/Functions/sampledata/ErrorEvent.dat",
+                "href": "https://zaliczeniowe1ss.azurewebsites.net/admin/functions/ErrorEvent",
+                "config": {},
+                "language": "DotNetAssembly",
+                "isDisabled": false
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/functions",
+            "apiVersion": "2023-01-01",
+            "name": "[concat(parameters('sites_zaliczeniowe1ss_name'), '/ProductionRate')]",
+            "location": "Poland Central",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_zaliczeniowe1ss_name'))]"
+            ],
+            "properties": {
+                "script_root_path_href": "https://zaliczeniowe1ss.azurewebsites.net/admin/vfs/site/wwwroot/ProductionRate/",
+                "script_href": "https://zaliczeniowe1ss.azurewebsites.net/admin/vfs/site/wwwroot/bin/FunctionAppsDemo.Functions.dll",
+                "config_href": "https://zaliczeniowe1ss.azurewebsites.net/admin/vfs/site/wwwroot/ProductionRate/function.json",
+                "test_data_href": "https://zaliczeniowe1ss.azurewebsites.net/admin/vfs/data/Functions/sampledata/ProductionRate.dat",
+                "href": "https://zaliczeniowe1ss.azurewebsites.net/admin/functions/ProductionRate",
+                "config": {},
+                "language": "DotNetAssembly",
+                "isDisabled": false
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/functions",
+            "apiVersion": "2023-01-01",
+            "name": "[concat(parameters('sites_zaliczeniowe1ss_name'), '/threeErrors')]",
+            "location": "Poland Central",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_zaliczeniowe1ss_name'))]"
+            ],
+            "properties": {
+                "script_root_path_href": "https://zaliczeniowe1ss.azurewebsites.net/admin/vfs/site/wwwroot/threeErrors/",
+                "script_href": "https://zaliczeniowe1ss.azurewebsites.net/admin/vfs/site/wwwroot/bin/FunctionAppsDemo.Functions.dll",
+                "config_href": "https://zaliczeniowe1ss.azurewebsites.net/admin/vfs/site/wwwroot/threeErrors/function.json",
+                "test_data_href": "https://zaliczeniowe1ss.azurewebsites.net/admin/vfs/data/Functions/sampledata/threeErrors.dat",
+                "href": "https://zaliczeniowe1ss.azurewebsites.net/admin/functions/threeErrors",
+                "config": {},
+                "language": "DotNetAssembly",
+                "isDisabled": false
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites/hostNameBindings",
+            "apiVersion": "2023-01-01",
+            "name": "[concat(parameters('sites_zaliczeniowe1ss_name'), '/', parameters('sites_zaliczeniowe1ss_name'), '.azurewebsites.net')]",
+            "location": "Poland Central",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('sites_zaliczeniowe1ss_name'))]"
+            ],
+            "properties": {
+                "siteName": "zaliczeniowe1ss",
+                "hostNameType": "Verified"
+            }
+        },
+        {
+            "type": "Microsoft.ApiManagement/service/apis/wikis",
+            "apiVersion": "2023-05-01-preview",
+            "name": "[concat(parameters('service_FunctionAppsDemoFunctionsapi_name'), '/FunctionAppsDemoFunctions/default')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service/apis', parameters('service_FunctionAppsDemoFunctionsapi_name'), 'FunctionAppsDemoFunctions')]",
+                "[resourceId('Microsoft.ApiManagement/service', parameters('service_FunctionAppsDemoFunctionsapi_name'))]"
+            ],
+            "properties": {
+                "documents": []
+            }
+        },
+        {
+            "type": "microsoft.communication/emailservices/domains/senderusernames",
+            "apiVersion": "2023-06-01-preview",
+            "name": "[concat(parameters('emailServices_email_seba_name'), '/azuremanageddomain/donotreply')]",
+            "dependsOn": [
+                "[resourceId('microsoft.communication/emailservices/domains', parameters('emailServices_email_seba_name'), 'azuremanageddomain')]",
+                "[resourceId('microsoft.communication/emailservices', parameters('emailServices_email_seba_name'))]"
+            ],
+            "properties": {
+                "username": "DoNotReply",
+                "displayName": "DoNotReply"
+            }
+        },
+        {
+            "type": "Microsoft.ServiceBus/namespaces/queues/authorizationrules",
+            "apiVersion": "2022-10-01-preview",
+            "name": "[concat(parameters('namespaces_ul2024ss_name'), '/myqueue/iothubroutes_iot-seba')]",
+            "location": "westeurope",
+            "dependsOn": [
+                "[resourceId('Microsoft.ServiceBus/namespaces/queues', parameters('namespaces_ul2024ss_name'), 'myqueue')]",
+                "[resourceId('Microsoft.ServiceBus/namespaces', parameters('namespaces_ul2024ss_name'))]"
+            ],
+            "properties": {
+                "rights": [
+                    "Send"
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.ServiceBus/namespaces/queues/authorizationrules",
+            "apiVersion": "2022-10-01-preview",
+            "name": "[concat(parameters('namespaces_ul2024ss_name'), '/myqueue/iothubroutes_zaliczenie_iot_ul')]",
+            "location": "westeurope",
+            "dependsOn": [
+                "[resourceId('Microsoft.ServiceBus/namespaces/queues', parameters('namespaces_ul2024ss_name'), 'myqueue')]",
+                "[resourceId('Microsoft.ServiceBus/namespaces', parameters('namespaces_ul2024ss_name'))]"
+            ],
+            "properties": {
+                "rights": [
+                    "Send"
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+            "apiVersion": "2023-04-01",
+            "name": "[concat(parameters('storageAccounts_storageseby_name'), '/default/azure-webjobs-hosts')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('storageAccounts_storageseby_name'), 'default')]",
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_storageseby_name'))]"
+            ],
+            "properties": {
+                "immutableStorageWithVersioning": {
+                    "enabled": false
+                },
+                "defaultEncryptionScope": "$account-encryption-key",
+                "denyEncryptionScopeOverride": false,
+                "publicAccess": "None"
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+            "apiVersion": "2023-04-01",
+            "name": "[concat(parameters('storageAccounts_storageseby_name'), '/default/azure-webjobs-secrets')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('storageAccounts_storageseby_name'), 'default')]",
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_storageseby_name'))]"
+            ],
+            "properties": {
+                "immutableStorageWithVersioning": {
+                    "enabled": false
+                },
+                "defaultEncryptionScope": "$account-encryption-key",
+                "denyEncryptionScopeOverride": false,
+                "publicAccess": "None"
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+            "apiVersion": "2023-04-01",
+            "name": "[concat(parameters('storageAccounts_storageseby_name'), '/default/errory')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('storageAccounts_storageseby_name'), 'default')]",
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_storageseby_name'))]"
+            ],
+            "properties": {
+                "immutableStorageWithVersioning": {
+                    "enabled": false
+                },
+                "defaultEncryptionScope": "$account-encryption-key",
+                "denyEncryptionScopeOverride": false,
+                "publicAccess": "None"
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+            "apiVersion": "2023-04-01",
+            "name": "[concat(parameters('storageAccounts_storageseby_name'), '/default/kontenerseby')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('storageAccounts_storageseby_name'), 'default')]",
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_storageseby_name'))]"
+            ],
+            "properties": {
+                "immutableStorageWithVersioning": {
+                    "enabled": false
+                },
+                "defaultEncryptionScope": "$account-encryption-key",
+                "denyEncryptionScopeOverride": false,
+                "publicAccess": "None"
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+            "apiVersion": "2023-04-01",
+            "name": "[concat(parameters('storageAccounts_storageseby_name'), '/default/production')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('storageAccounts_storageseby_name'), 'default')]",
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_storageseby_name'))]"
+            ],
+            "properties": {
+                "immutableStorageWithVersioning": {
+                    "enabled": false
+                },
+                "defaultEncryptionScope": "$account-encryption-key",
+                "denyEncryptionScopeOverride": false,
+                "publicAccess": "None"
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
+            "apiVersion": "2023-04-01",
+            "name": "[concat(parameters('storageAccounts_storageseby_name'), '/default/zaliczeniowe1ssba73')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/fileServices', parameters('storageAccounts_storageseby_name'), 'default')]",
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_storageseby_name'))]"
+            ],
+            "properties": {
+                "accessTier": "TransactionOptimized",
+                "shareQuota": 102400,
+                "enabledProtocols": "SMB"
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/queueServices/queues",
+            "apiVersion": "2023-04-01",
+            "name": "[concat(parameters('storageAccounts_storageseby_name'), '/default/myqueue')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/queueServices', parameters('storageAccounts_storageseby_name'), 'default')]",
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_storageseby_name'))]"
+            ],
+            "properties": {
+                "metadata": {}
+            }
+        }
+    ]
+}

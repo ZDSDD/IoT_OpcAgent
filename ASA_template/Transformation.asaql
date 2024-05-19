@@ -1,0 +1,64 @@
+/*
+Here are links to help you get started with Stream Analytics Query Language:
+Common query patterns - https://go.microsoft.com/fwLink/?LinkID=619153
+Query language - https://docs.microsoft.com/stream-analytics-query/query-language-elements-azure-stream-analytics
+*/
+SELECT
+    System.Timestamp() AS WindowStartTime,
+    IoTHub.ConnectionDeviceId,
+    AVG(Temperature) AS AverageTemperature,
+    MIN(Temperature) AS MinTemperature,
+    MAX(Temperature) AS MaxTemperature
+INTO
+    [kontenerseby]
+FROM
+    [iot-seba]
+WHERE
+    System.Timestamp() >= DATEADD(minute, -5, System.Timestamp())  -- Data from the last 5 minutes
+
+GROUP BY
+    IoTHub.ConnectionDeviceId,
+    TumblingWindow(minute, 1)
+
+-- query 2
+
+SELECT
+    System.Timestamp() AS EventTime,
+    IoTHub.ConnectionDeviceId
+INTO
+    [aloterrors]
+FROM
+    [iot-seba]
+WHERE
+    Event = 'error' AND ErrorsIncreased = 'true'
+GROUP BY
+    IoTHub.ConnectionDeviceId,
+    TumblingWindow(second, 60)
+HAVING
+    COUNT(*) >= 3
+
+-- Query 3: Production KPIs
+SELECT
+    System.Timestamp() AS WindowStartTime,
+    IoTHub.ConnectionDeviceId as DeviceId,
+    SUM(CASE WHEN GoodCount IS NULL THEN 0 ELSE GoodCount END) as TotalGoodCount,
+    SUM(CASE WHEN BadCount IS NULL THEN 0 ELSE BadCount END) as TotalBadCount
+INTO
+    [production]
+FROM
+    [iot-seba]
+GROUP BY
+    IoTHub.ConnectionDeviceId,
+    TumblingWindow(minute, 5)
+
+-- query 4
+SELECT
+    *
+INTO
+    [myqueue]
+FROM 
+    [iot-seba]
+WHERE
+    Event = 'error'
+
+

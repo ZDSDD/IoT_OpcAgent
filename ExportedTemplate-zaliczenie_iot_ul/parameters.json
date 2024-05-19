@@ -1,0 +1,51 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "apis_FunctionAppsDemoFunctions_path": {
+            "value": null
+        },
+        "IotHubs_iot_seba_connectionString": {
+            "value": null
+        },
+        "IotHubs_iot_seba_containerName": {
+            "value": null
+        },
+        "IotHubs_iot_seba_name": {
+            "value": null
+        },
+        "sites_zaliczeniowe1ss_name": {
+            "value": null
+        },
+        "namespaces_ul2024ss_name": {
+            "value": null
+        },
+        "components_zaliczeniowe1ss_name": {
+            "value": null
+        },
+        "storageAccounts_storageseby_name": {
+            "value": null
+        },
+        "emailServices_email_seba_name": {
+            "value": null
+        },
+        "serverfarms_ASP_zaliczenieiotul_b287_name": {
+            "value": null
+        },
+        "streamingjobs_zaliczeniowyss_name": {
+            "value": null
+        },
+        "CommunicationServices_zaliczenieiot_name": {
+            "value": null
+        },
+        "service_FunctionAppsDemoFunctionsapi_name": {
+            "value": null
+        },
+        "actionGroups_Application_Insights_Smart_Detection_name": {
+            "value": null
+        },
+        "workspaces_DefaultWorkspace_027b0a11_67a4_40b4_a1ee_8056ad85aeb2_PLC_externalid": {
+            "value": null
+        }
+    }
+}

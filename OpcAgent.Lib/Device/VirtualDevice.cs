@@ -270,6 +270,14 @@ public class VirtualDevice : IDisposable
         await UpdateReportedDeviceTwinPropertyAsync("ProductionRate", _opcRepository.GetProductionRate());
         this._lastErrorsValue = _opcRepository.GetErrors();
         _opcClient.SubscribeDataChange($"{NodeId}/{OpcEndpoint.DeviceError}", HandleErrorsChanged);
+        _opcClient.SubscribeDataChange($"{NodeId}/{OpcEndpoint.ProductionRate}", HandleProductionRateChanged);
+    }
+
+    private async void HandleProductionRateChanged(object sender, OpcDataChangeReceivedEventArgs e)
+    {
+        object productionRate = e.Item.Value.Value;
+        Console.WriteLine($"changed production rate: {productionRate}");
+        await UpdateReportedDeviceTwinPropertyAsync("ProductionRate",productionRate);
     }
 
     /// <summary>

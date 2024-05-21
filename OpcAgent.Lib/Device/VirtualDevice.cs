@@ -272,7 +272,11 @@ public class VirtualDevice : IDisposable
         _opcClient.SubscribeDataChange($"{NodeId}/{OpcEndpoint.DeviceError}", HandleErrorsChanged);
         _opcClient.SubscribeDataChange($"{NodeId}/{OpcEndpoint.ProductionRate}", HandleProductionRateChanged);
     }
-
+    /// <summary>
+    /// Updates reported production rate in device twin
+    /// </summary>
+    /// <param name="sender">The sender object.</param>
+    /// <param name="e">The event arguments containing the changed data.</param>
     private async void HandleProductionRateChanged(object sender, OpcDataChangeReceivedEventArgs e)
     {
         object productionRate = e.Item.Value.Value;
@@ -295,7 +299,7 @@ public class VirtualDevice : IDisposable
     }
 
     /// <summary>
-    /// Sends a device-to-cloud (D2C) message and handles changes in errors. Invokes OnErrorChange
+    /// Sends a device-to-cloud (D2C) message and handles changes in errors. Invokes OnErrorChange. Updates reported errors in device twin.
     /// </summary>
     /// <param name="sender">The sender object.</param>
     /// <param name="e">The event arguments containing the changed data.</param>
